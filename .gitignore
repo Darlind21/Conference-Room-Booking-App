@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/Conference Room Booking App/appsettings.json
+/Conference Room Booking App/appsettings.Development.json
