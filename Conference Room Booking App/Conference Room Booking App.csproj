@@ -9,11 +9,32 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Data\DTOs\**" />
+    <Compile Remove="Interfaces\**" />
+    <Compile Remove="Services\**" />
+    <Content Remove="Data\DTOs\**" />
+    <Content Remove="Interfaces\**" />
+    <Content Remove="Services\**" />
+    <EmbeddedResource Remove="Data\DTOs\**" />
+    <EmbeddedResource Remove="Interfaces\**" />
+    <EmbeddedResource Remove="Services\**" />
+    <None Remove="Data\DTOs\**" />
+    <None Remove="Interfaces\**" />
+    <None Remove="Services\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.17" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.17" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.17" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.17" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.17" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="BusinessLogic\Interfaces\" />
+    <Folder Include="BusinessLogic\Services\" />
+    <Folder Include="Data\ViewModels\" />
   </ItemGroup>
 
 </Project>

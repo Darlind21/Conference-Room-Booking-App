@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using Conference_Room_Booking_App.Models;
 using Microsoft.AspNetCore.Mvc;
+using Conference_Room_Booking_App.Data.Models;
 
 namespace Conference_Room_Booking_App.Controllers
 {

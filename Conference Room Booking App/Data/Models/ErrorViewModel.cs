@@ -1,4 +1,4 @@
-namespace Conference_Room_Booking_App.Models
+namespace Conference_Room_Booking_App.Data.Models
 {
     public class ErrorViewModel
     {
