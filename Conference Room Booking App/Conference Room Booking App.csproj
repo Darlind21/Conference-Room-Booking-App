@@ -31,10 +31,4 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.17" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="BusinessLogic\Interfaces\" />
-    <Folder Include="BusinessLogic\Services\" />
-    <Folder Include="Data\ViewModels\" />
-  </ItemGroup>
-
 </Project>

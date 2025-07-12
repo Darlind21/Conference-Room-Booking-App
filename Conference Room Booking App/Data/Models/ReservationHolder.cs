@@ -8,22 +8,10 @@ namespace Conference_Room_Booking_App.Data.Models
     public class ReservationHolder
     {
         public int Id { get; set; }
-
-        [Required]
         public required string FirstName { get; set; }
-
-        [Required]
         public required string LastName { get; set; }
-
-        [Required]
-        [EmailAddress]
         public required string Email { get; set; }
-
-        [Required]
         public required string IdCardNumber { get; set; }
-
-        [Required]
-        [Phone]
         public required int PhoneNumber { get; set; }
 
 
