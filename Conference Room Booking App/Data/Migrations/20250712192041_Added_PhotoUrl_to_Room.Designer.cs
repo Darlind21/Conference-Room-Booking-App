@@ -4,6 +4,7 @@ using Conference_Room_Booking_App.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Conference_Room_Booking_App.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250712192041_Added_PhotoUrl_to_Room")]
+    partial class Added_PhotoUrl_to_Room
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -74,7 +77,7 @@ namespace Conference_Room_Booking_App.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("ReservationHolderId")
+                    b.Property<int>("ReservationHolderId")
                         .HasColumnType("int");
 
                     b.Property<int>("RoomId")
@@ -89,8 +92,7 @@ namespace Conference_Room_Booking_App.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ReservationHolderId")
-                        .IsUnique()
-                        .HasFilter("[ReservationHolderId] IS NOT NULL");
+                        .IsUnique();
 
                     b.HasIndex("RoomId");
 
@@ -105,7 +107,7 @@ namespace Conference_Room_Booking_App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("BookingId")
+                    b.Property<int>("BookingId")
                         .HasColumnType("int");
 
                     b.Property<string>("Email")
@@ -408,7 +410,8 @@ namespace Conference_Room_Booking_App.Migrations
                     b.HasOne("Conference_Room_Booking_App.Data.Models.ReservationHolder", "ReservationHolder")
                         .WithOne("Booking")
                         .HasForeignKey("Conference_Room_Booking_App.Data.Models.Booking", "ReservationHolderId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("Conference_Room_Booking_App.Data.Models.Room", "Room")
                         .WithMany("Bookings")
@@ -485,7 +488,8 @@ namespace Conference_Room_Booking_App.Migrations
 
             modelBuilder.Entity("Conference_Room_Booking_App.Data.Models.ReservationHolder", b =>
                 {
-                    b.Navigation("Booking");
+                    b.Navigation("Booking")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Conference_Room_Booking_App.Data.Models.Room", b =>

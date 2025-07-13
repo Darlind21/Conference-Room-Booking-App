@@ -1,0 +1,152 @@
+﻿@model Conference_Room_Booking_App.Data.ViewModels.BookingStatusViewModel
+@{
+    ViewData["Title"] = "Booking Status";
+}
+
+<div class="container mt-4">
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <!-- Error State -->
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <h5>@Model.ErrorMessage</h5>
+                </div>
+
+                <!-- Search Again Section -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title text-center mb-3">Check Booking Status</h5>
+                        <form asp-controller="Home" asp-action="CheckBookingStatus" method="post" class="d-flex">
+                            <input type="text" name="bookingCode" class="form-control me-2" placeholder="Enter booking code to check status" required>
+                            <button type="submit" class="btn btn-primary">Check</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Success State - Show Booking Details -->
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Booking Details</h5>
+                        @if (Model.CanEdit || Model.CanCancel)
+                        {
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @if (Model.CanEdit)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" href="@Url.Action("Edit", "Booking", new { bookingCode = Model.BookingCode })">
+                                                <i class="fas fa-edit me-2"></i>Edit Booking
+                                            </a>
+                                        </li>
+                                    }
+                                    @if (Model.CanCancel)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="javascript:void(0)" onclick="cancelBooking('@Model.BookingCode')">
+                                                <i class="fas fa-times me-2"></i>Cancel Booking
+                                            </a>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("Index", "Home")">
+                                            <i class="fas fa-home me-2"></i>Go to Home
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                    </div>
+                    <div class="card-body">
+                        <!-- Status Badge -->
+                        <div class="text-center mb-4">
+                            <span class="badge bg-@Model.StatusColor fs-6 py-2 px-3">
+                                @Model.Status
+                            </span>
+                        </div>
+
+                        <!-- Booking Information -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">Booking Information</h6>
+                                <div class="mb-2">
+                                    <strong>Booking Code:</strong> @Model.BookingCode
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Room:</strong> @Model.RoomName (@Model.RoomCode)
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Attendees:</strong> @Model.AttendeesCount people
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">Schedule</h6>
+                                <div class="mb-2">
+                                    <strong>Date:</strong> @Model.StartTime.ToString("dddd, MMMM dd, yyyy")
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Time:</strong> @Model.StartTime.ToString("HH:mm") - @Model.EndTime.ToString("HH:mm")
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Duration:</strong> @((Model.EndTime - Model.StartTime).TotalHours) hours
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(Model.Notes))
+                        {
+                            <div class="mt-4">
+                                <h6 class="text-muted mb-2">Notes</h6>
+                                <div class="bg-light p-3 rounded">
+                                    @Model.Notes
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Cancel Booking Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel Booking</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this booking?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Booking</button>
+                <form id="cancelForm" asp-controller="Booking" asp-action="Cancel" method="post" class="d-inline">
+                    <input type="hidden" name="bookingCode" id="cancelBookingCode">
+                    <button type="submit" class="btn btn-danger">Cancel Booking</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function cancelBooking(bookingCode) {
+        document.getElementById('cancelBookingCode').value = bookingCode;
+        var modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+        modal.show();
+    }
+</script>

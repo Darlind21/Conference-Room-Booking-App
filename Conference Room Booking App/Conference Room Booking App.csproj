@@ -9,16 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Data\DTOs\**" />
     <Compile Remove="Interfaces\**" />
     <Compile Remove="Services\**" />
-    <Content Remove="Data\DTOs\**" />
     <Content Remove="Interfaces\**" />
     <Content Remove="Services\**" />
-    <EmbeddedResource Remove="Data\DTOs\**" />
     <EmbeddedResource Remove="Interfaces\**" />
     <EmbeddedResource Remove="Services\**" />
-    <None Remove="Data\DTOs\**" />
     <None Remove="Interfaces\**" />
     <None Remove="Services\**" />
   </ItemGroup>

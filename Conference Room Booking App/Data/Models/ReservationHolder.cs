@@ -16,7 +16,7 @@ namespace Conference_Room_Booking_App.Data.Models
 
 
         [ForeignKey(nameof(Booking))]
-        public int BookingId { get; set; }
-        public Booking Booking { get; set; } = null!;
+        public int? BookingId { get; set; }
+        public Booking? Booking { get; set; } = null!;
     }
 }

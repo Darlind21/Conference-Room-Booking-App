@@ -21,7 +21,7 @@ namespace Conference_Room_Booking_App.Data.Models
         public required Room Room { get; set; }
 
         [ForeignKey(nameof(ReservationHolder))]
-        public int ReservationHolderId { get; set; }
-        public required ReservationHolder ReservationHolder { get; set; } = null!;
+        public int? ReservationHolderId { get; set; }
+        public required ReservationHolder? ReservationHolder { get; set; } = null!;
     }
 }

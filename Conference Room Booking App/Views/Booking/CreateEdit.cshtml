@@ -1,0 +1,227 @@
+﻿@model Conference_Room_Booking_App.Data.ViewModels.CreateEditBookingViewModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit Booking" : "Create Booking";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">@(Model.IsEdit ? "Edit Booking" : "Book Room")</h2>
+        </div>
+    </div>
+
+    <form asp-controller="Booking" asp-action="Submit" method="post" id="bookingForm">
+        <input type="hidden" asp-for="BookingId" />
+        <input type="hidden" asp-for="BookingCode" />
+        <input type="hidden" asp-for="IsEdit" />
+        <input type="hidden" asp-for="RoomDetail.Id" />
+
+        <!-- Room Details Card (Read-only) -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-door-open me-2"></i>Room Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                @if (!string.IsNullOrEmpty(Model.RoomDetail.PhotoUrl))
+                                {
+                                    <img src="@Model.RoomDetail.PhotoUrl" class="img-fluid rounded" alt="@Model.RoomDetail.Name" style="max-height: 200px;">
+                                }
+                                else
+                                {
+                                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 200px;">
+                                        <i class="fas fa-door-open fa-3x text-muted"></i>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-8">
+                                <h4>@Model.RoomDetail.Name</h4>
+                                <p class="text-muted mb-2">Room Code: @Model.RoomDetail.RoomCode</p>
+                                <p class="text-muted mb-3">Maximum Capacity: @Model.RoomDetail.MaxCapacity people</p>
+
+                                @if (Model.RoomDetail.AvailableTimeSlots.Any())
+                                {
+                                    <div>
+                                        <h6>Available Time Slots:</h6>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach (var slot in Model.RoomDetail.AvailableTimeSlots)
+                                            {
+                                                <span class="badge bg-success">@slot</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Information Card -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>Booking Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="BookingInfo.AttendeesCount" class="form-label">
+                                        <i class="fas fa-users me-2"></i>Number of Attendees
+                                    </label>
+                                    <input asp-for="BookingInfo.AttendeesCount" class="form-control" type="number" min="1" max="@Model.RoomDetail.MaxCapacity" required>
+                                    <span asp-validation-for="BookingInfo.AttendeesCount" class="text-danger"></span>
+                                    <div class="form-text">Maximum capacity: @Model.RoomDetail.MaxCapacity people</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-clock me-2"></i>Duration
+                                    </label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label asp-for="BookingInfo.StartTime" class="form-label">Start Time</label>
+                                            <input asp-for="BookingInfo.StartTime" class="form-control" type="datetime-local" required>
+                                            <span asp-validation-for="BookingInfo.StartTime" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-6">
+                                            <label asp-for="BookingInfo.EndTime" class="form-label">End Time</label>
+                                            <input asp-for="BookingInfo.EndTime" class="form-control" type="datetime-local" required>
+                                            <span asp-validation-for="BookingInfo.EndTime" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label asp-for="BookingInfo.Notes" class="form-label">
+                                        <i class="fas fa-sticky-note me-2"></i>Additional Notes (Optional)
+                                    </label>
+                                    <textarea asp-for="BookingInfo.Notes" class="form-control" rows="3" placeholder="Any special requirements or notes..."></textarea>
+                                    <span asp-validation-for="BookingInfo.Notes" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservation Holder Details Card -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-user me-2"></i>Reservation Holder Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ReservationHolder.FirstName" class="form-label">First Name</label>
+                                    <input asp-for="ReservationHolder.FirstName" class="form-control" required>
+                                    <span asp-validation-for="ReservationHolder.FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ReservationHolder.LastName" class="form-label">Last Name</label>
+                                    <input asp-for="ReservationHolder.LastName" class="form-control" required>
+                                    <span asp-validation-for="ReservationHolder.LastName" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ReservationHolder.Email" class="form-label">Email Address</label>
+                                    <input asp-for="ReservationHolder.Email" class="form-control" type="email" required>
+                                    <span asp-validation-for="ReservationHolder.Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ReservationHolder.PhoneNumber" class="form-label">Phone Number</label>
+                                    <input asp-for="ReservationHolder.PhoneNumber" class="form-control" type="tel" required>
+                                    <span asp-validation-for="ReservationHolder.PhoneNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ReservationHolder.IdCardNumber" class="form-label">ID Card Number</label>
+                                    <input asp-for="ReservationHolder.IdCardNumber" class="form-control" required>
+                                    <span asp-validation-for="ReservationHolder.IdCardNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Home
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-check me-2"></i>@(Model.IsEdit ? "Update Booking" : "Submit Booking")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Set minimum date/time to current date/time
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            const minDateTime = now.toISOString().slice(0, 16);
+
+            const startTimeInput = document.getElementById('BookingInfo_StartTime');
+            const endTimeInput = document.getElementById('BookingInfo_EndTime');
+
+            if (startTimeInput) {
+                startTimeInput.min = minDateTime;
+            }
+            if (endTimeInput) {
+                endTimeInput.min = minDateTime;
+            }
+
+            // Update end time minimum when start time changes
+            startTimeInput?.addEventListener('change', function() {
+                if (endTimeInput) {
+                    endTimeInput.min = this.value;
+                    if (endTimeInput.value && endTimeInput.value <= this.value) {
+                        const startDate = new Date(this.value);
+                        startDate.setHours(startDate.getHours() + 1);
+                        endTimeInput.value = startDate.toISOString().slice(0, 16);
+                    }
+                }
+            });
+        });
+    </script>
+}

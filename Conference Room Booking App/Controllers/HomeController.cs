@@ -1,32 +1,106 @@
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
+using Conference_Room_Booking_App.BusinessLogic.Interfaces;
+using Conference_Room_Booking_App.BusinessLogic.Services;
+using Conference_Room_Booking_App.Data.Enums;
 using Conference_Room_Booking_App.Data.Models;
+using Conference_Room_Booking_App.Data.ViewModels;
+using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 
 namespace Conference_Room_Booking_App.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController(IBookingService _bookingService, IRoomService _roomService) : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-
-        public HomeController(ILogger<HomeController> logger)
+        public async Task<IActionResult> Index(HomeViewModel model, int page = 1)
         {
-            _logger = logger;
+            var rooms = await _roomService.GetFilteredRoomsAsync(
+                model.StartTime,
+                model.EndTime,
+                model.Date,
+                model.AttendeesCount,
+                page,
+                6
+            );
+
+            model.Rooms = new PaginatedRoomsViewModel
+            {
+                Rooms = rooms.Items.Select(r => new RoomCardViewModel
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    RoomCode = r.RoomCode,
+                    MaxCapacity = r.MaxCapacity,
+                    PhotoUrl = r.PhotoUrl,
+                    AvailableTimeSlots = r.AvailableTimeSlots
+                }).ToList(),
+                CurrentPage = page,
+                TotalPages = rooms.TotalPages,
+                TotalItems = rooms.TotalItems,
+                ItemsPerPage = rooms.ItemsPerPage
+            };
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("_RoomsPartial", model.Rooms);
+            }
+
+            return View(model);
         }
 
-        public IActionResult Index()
+        [HttpPost, HttpGet]
+        public async Task<IActionResult> CheckBookingStatus(string bookingCode)
         {
-            return View();
+            if (string.IsNullOrEmpty(bookingCode))
+            {
+                return View("BookingStatus", new BookingStatusViewModel
+                {
+                    ErrorMessage = "Please enter a booking code."
+                });
+            }
+
+            var booking = await _bookingService.GetBookingByCodeAsync(bookingCode);
+
+            if (booking == null)
+            {
+                return View("BookingStatus", new BookingStatusViewModel
+                {
+                    ErrorMessage = "Booking code not found. Please check your code and try again."
+                });
+            }
+
+            var viewModel = new BookingStatusViewModel
+            {
+                BookingCode = booking.BookingCode,
+                Status = booking.Status.ToString(),
+                StatusColor = GetStatusColor(booking.Status),
+                RoomName = booking.Room.Name,
+                RoomCode = booking.Room.RoomCode,
+                AttendeesCount = booking.AttendeesCount,
+                StartTime = booking.StartTime,
+                EndTime = booking.EndTime,
+                Notes = booking.Notes,
+                CanEdit = booking.Status == BookingStatus.Pending,
+                CanCancel = booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Confirmed
+            };
+
+            // If this is a POST request (redirect from booking creation), redirect to GET to avoid form resubmission
+            if (HttpContext.Request.Method == "GET ")
+            {
+                return RedirectToAction("CheckBookingStatus", new { bookingCode = bookingCode });
+            }
+
+            return View("BookingStatus", viewModel);
         }
 
-        public IActionResult Privacy()
+        private string GetStatusColor(BookingStatus status)
         {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return status switch
+            {
+                BookingStatus.Pending => "warning",
+                BookingStatus.Confirmed => "success",
+                BookingStatus.Rejected => "danger",
+                BookingStatus.Cancelled => "secondary",
+                _ => "secondary"
+            };
         }
     }
 }

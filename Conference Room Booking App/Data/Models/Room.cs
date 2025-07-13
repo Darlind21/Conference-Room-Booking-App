@@ -11,6 +11,7 @@ namespace Conference_Room_Booking_App.Data.Models
         public required string RoomCode { get; set; }
         public required int MaxCapacity { get; set; }
         public bool IsActive { get; set; } = true; //by default when a room is created it is active
+        public string? PhotoUrl { get; set; }
         public List<Booking> Bookings { get; set; } = [];
         public List<UnavailabilityPeriod> UnavailabilityPeriods { get; set; } = [];
     }

@@ -1,8 +1,97 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model Conference_Room_Booking_App.Data.ViewModels.HomeViewModel
+@{
+    ViewData["Title"] = "Conference Room Booking";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-4">
+    <!-- Booking Code Check Section -->
+    <div class="row mb-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title text-center mb-3">Check Booking Status</h5>
+                    <form asp-controller="Home" asp-action="CheckBookingStatus" method="post" class="d-flex">
+                        <input type="text" name="bookingCode" class="form-control me-2" placeholder="Enter booking code to check status" required>
+                        <button type="submit" class="btn btn-primary">Check</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Find Available Rooms</h5>
+                    <form id="filterForm" asp-controller="Home" asp-action="Index" method="get">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label asp-for="Date" class="form-label">Date</label>
+                                <input asp-for="Date" type="date" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label asp-for="StartTime" class="form-label">Start Time</label>
+                                <input asp-for="StartTime" type="time" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label asp-for="EndTime" class="form-label">End Time</label>
+                                <input asp-for="EndTime" type="time" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label asp-for="AttendeesCount" class="form-label">Attendees</label>
+                                <input asp-for="AttendeesCount" type="number" class="form-control" min="1">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-success me-2">Search</button>
+                                <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rooms Section -->
+    <div class="row">
+        <div class="col-12">
+            <div id="roomsContainer">
+                @await Html.PartialAsync("_RoomsPartial", Model.Rooms)
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    function clearFilters() {
+        document.getElementById('filterForm').reset();
+        document.getElementById('filterForm').submit();
+    }
+
+    function loadPage(page) {
+        const form = document.getElementById('filterForm');
+        const formData = new FormData(form);
+        formData.append('page', page);
+
+        const params = new URLSearchParams(formData);
+
+        fetch(`/Home/Index?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('roomsContainer').innerHTML = html;
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // Handle form submission with AJAX for filtering
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadPage(1);
+    });
+</script>
