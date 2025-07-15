@@ -15,6 +15,7 @@ namespace Conference_Room_Booking_App.Data.Models
         public required int PhoneNumber { get; set; }
 
 
+        //BUG: Since a booking needs a reservation holder to be created and vice versa its sort of a bug to make the reservationholder nullable but also cannot make non-nullable 
         [ForeignKey(nameof(Booking))]
         public int? BookingId { get; set; }
         public Booking? Booking { get; set; } = null!;

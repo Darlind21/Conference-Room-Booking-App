@@ -142,5 +142,70 @@ namespace Conference_Room_Booking_App.Controllers
             TempData["ErrorMessage"] = "Unable to cancel booking. Please try again.";
             return RedirectToAction("CheckBookingStatus", "Home", new { bookingCode });
         }
+
+        [HttpPost] //REVIEW:
+        public async Task<IActionResult> CheckAvailability([FromBody] CheckAvailabilityRequest request)
+        {
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest(new { isAvailable = false, message = "Invalid request" });
+                }
+
+                // Validate the request
+                if (request.RoomId <= 0)
+                {
+                    return BadRequest(new { isAvailable = false, message = "Invalid room ID" });
+                }
+
+                if (request.StartTime >= request.EndTime)
+                {
+                    return BadRequest(new { isAvailable = false, message = "Start time must be before end time" });
+                }
+
+                // Check if the times are within working hours (8:00 AM - 11:00 PM)
+                var workingStart = new TimeSpan(8, 0, 0); // 8:00 AM
+                var workingEnd = new TimeSpan(23, 0, 0);  // 11:00 PM
+
+                if (request.StartTime.TimeOfDay < workingStart || request.StartTime.TimeOfDay > workingEnd ||
+                    request.EndTime.TimeOfDay < workingStart || request.EndTime.TimeOfDay > workingEnd)
+                {
+                    return Ok(new { isAvailable = false, message = "Booking times must be within working hours (8:00 AM - 11:00 PM)" });
+                }
+
+                // Check if the booking is in the past
+                if (request.StartTime < DateTime.Now)
+                {
+                    return Ok(new { isAvailable = false, message = "Cannot book in the past" });
+                }
+
+                // Call the booking service to check availability
+                var isAvailable = await _bookingService.IsRoomAvailableAsync(
+                    request.RoomId,
+                    request.StartTime,
+                    request.EndTime,
+                    request.ExcludeBookingId
+                );
+
+                return Ok(new { isAvailable = isAvailable });
+            }
+            catch
+            {
+                // Log the exception (assuming you have logging configured)
+                // _logger.LogError(ex, "Error checking room availability");
+
+                return StatusCode(500, new { isAvailable = false, message = "An error occurred while checking availability" });
+            }
+        }
+
+        // Request model for the CheckAvailability endpoint
+        public class CheckAvailabilityRequest
+        {
+            public int RoomId { get; set; }
+            public DateTime StartTime { get; set; }
+            public DateTime EndTime { get; set; }
+            public int? ExcludeBookingId { get; set; }
+        }
     }
 }

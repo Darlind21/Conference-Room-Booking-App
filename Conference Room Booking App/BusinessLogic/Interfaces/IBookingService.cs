@@ -14,9 +14,4 @@ namespace Conference_Room_Booking_App.BusinessLogic.Interfaces
         Task<List<Booking>> GetBookingsByRoomIdAsync(int roomId);
         Task<bool> IsRoomAvailableAsync(int roomId, DateTime startTime, DateTime endTime, int? excludeBookingId = null);
     }
-
-    //public interface IBookingService
-    //{
-    //    Task<List<BookingDetailVM>> GetBookingsPerRoomAsync(int id); //
-    //}
 }

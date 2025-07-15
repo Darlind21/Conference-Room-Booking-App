@@ -11,17 +11,12 @@ namespace Conference_Room_Booking_App.BusinessLogic.Interfaces
         Task<PaginatedResult<RoomWithAvailability>> GetFilteredRoomsAsync(DateTime? startTime, DateTime? endTime, DateTime? date, int? attendeesCount, int page, int itemsPerPage);
         Task<List<string>> GetAvailableTimeSlotsAsync(int roomId);
         Task<List<Room>> GetAllActiveRoomsAsync();
-    }
 
-    //public interface IRoomService
-    //{
+        //TODO:
     //    Task<RoomDetailVM> CreateRoomAsync (CreateRoomVM payload);
-    //    Task<List<RoomDetailVM>> GetAllActiveRoomsAsync ();
+        //TODO:
     //    Task<bool> EditRoomAsync(EditRoomVM payload);
-    //    Task<List<RoomDetailVM>> FilterRoomsAsync(RoomFilterVM filter);
+        //TODO:
     //    Task<bool> DeactivateRoomAsync(int id);
-    //    Task<List<AvailableTimeslotVM>> GetAvailableTimeslotsAsync(int roomId, DateOnly date);
-    //    Task<List<BookingDetailVM>> GetAllBookingsForRoomAsync(int roomId);
-    //    Task<RoomDetailVM> GetRoomByIdAsync(int roomId);
-    //}
+    }
 }

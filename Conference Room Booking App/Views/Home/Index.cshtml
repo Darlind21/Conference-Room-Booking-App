@@ -2,7 +2,6 @@
 @{
     ViewData["Title"] = "Conference Room Booking";
 }
-
 <div class="container mt-4">
     <!-- Booking Code Check Section -->
     <div class="row mb-4">
@@ -25,27 +24,36 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title mb-3">Find Available Rooms</h5>
-                    <form id="filterForm" asp-controller="Home" asp-action="Index" method="get">
+                    <form id="filterForm" method="get">
                         <div class="row">
                             <div class="col-md-3">
-                                <label asp-for="Date" class="form-label">Date</label>
-                                <input asp-for="Date" type="date" class="form-control">
+                                <label for="Date" class="form-label">Date</label>
+                                <input id="Date" name="Date" type="date" class="form-control">
+                                <div id="dateError" class="error-message"></div>
                             </div>
                             <div class="col-md-2">
-                                <label asp-for="StartTime" class="form-label">Start Time</label>
-                                <input asp-for="StartTime" type="time" class="form-control">
+                                <label for="StartTime" class="form-label">Start Time</label>
+                                <input id="StartTime" name="StartTime" type="time" class="form-control" step="900">
+                                <div class="info-text">Start time must fall within quarter-hour intervals (e.g., 8:00, 8:15, 8:30, 8:45)</div>
+                                <div id="startTimeError" class="error-message"></div>
                             </div>
                             <div class="col-md-2">
-                                <label asp-for="EndTime" class="form-label">End Time</label>
-                                <input asp-for="EndTime" type="time" class="form-control">
+                                <label for="EndTime" class="form-label">End Time</label>
+                                <input id="EndTime" name="EndTime" type="time" class="form-control" step="900">
+                                <div class="info-text">End time must fall within quarter-hour intervals (e.g., 10:00, 10:15, 10:30, 10:45)</div>
+                                <div id="endTimeError" class="error-message"></div>
                             </div>
                             <div class="col-md-2">
-                                <label asp-for="AttendeesCount" class="form-label">Attendees</label>
-                                <input asp-for="AttendeesCount" type="number" class="form-control" min="1">
+                                <label for="AttendeesCount" class="form-label">Attendees</label>
+                                <input id="AttendeesCount" name="AttendeesCount" type="number" class="form-control" min="5" max="100">
+                                <div id="attendeesError" class="error-message"></div>
                             </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button type="submit" class="btn btn-success me-2">Search</button>
-                                <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-flex">
+                                    <button id="searchButton" type="submit" class="btn btn-success me-2">Search</button>
+                                    <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+                                </div>
                             </div>
                         </div>
                     </form>
@@ -53,8 +61,10 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Rooms Section -->
+<!-- Rooms Section -->
+<div>
     <div class="row">
         <div class="col-12">
             <div id="roomsContainer">
@@ -65,33 +75,459 @@
 </div>
 
 <script>
-    function clearFilters() {
-        document.getElementById('filterForm').reset();
-        document.getElementById('filterForm').submit();
-    }
+    //script for validating filter inputs
+       let validationState = {
+           date: true,
+           startTime: true,
+           endTime: true,
+           timeRange: true,
+           attendees: true
+       };
 
-    function loadPage(page) {
-        const form = document.getElementById('filterForm');
-        const formData = new FormData(form);
-        formData.append('page', page);
+       // Set date constraints
+       function setDateConstraints() {
+           const dateInput = document.getElementById('Date');
+           const today = new Date();
+           const maxDate = new Date();
+           maxDate.setDate(today.getDate() + 60);
 
-        const params = new URLSearchParams(formData);
+           // Format dates to YYYY-MM-DD
+           const todayStr = today.toISOString().split('T')[0];
+           const maxDateStr = maxDate.toISOString().split('T')[0];
 
-        fetch(`/Home/Index?${params.toString()}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('roomsContainer').innerHTML = html;
-        })
-        .catch(error => console.error('Error:', error));
-    }
+           dateInput.min = todayStr;
+           dateInput.max = maxDateStr;
+       }
 
-    // Handle form submission with AJAX for filtering
-    document.getElementById('filterForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        loadPage(1);
-    });
+       // Round time to nearest quarter hour
+       function roundToNearestQuarterHour(timeStr) {
+           if (!timeStr) return '';
+
+           const [hours, minutes] = timeStr.split(':').map(Number);
+           const totalMinutes = hours * 60 + minutes;
+
+           // Round to nearest 15-minute interval
+           const roundedMinutes = Math.round(totalMinutes / 15) * 15;
+
+           const newHours = Math.floor(roundedMinutes / 60);
+           const newMinutes = roundedMinutes % 60;
+
+           // Format back to HH:MM
+           const formattedHours = newHours.toString().padStart(2, '0');
+           const formattedMinutes = newMinutes.toString().padStart(2, '0');
+
+           return `${formattedHours}:${formattedMinutes}`;
+       }
+
+       // Validate 15-minute intervals
+       function isValidTimeInterval(timeStr) {
+           if (!timeStr) return false;
+
+           const [hours, minutes] = timeStr.split(':').map(Number);
+           return minutes % 15 === 0;
+       }
+
+       // Calculate time difference in minutes
+       function getTimeDifferenceInMinutes(startTime, endTime) {
+           const [startHours, startMinutes] = startTime.split(':').map(Number);
+           const [endHours, endMinutes] = endTime.split(':').map(Number);
+
+           const startTotalMinutes = startHours * 60 + startMinutes;
+           const endTotalMinutes = endHours * 60 + endMinutes;
+
+           return endTotalMinutes - startTotalMinutes;
+       }
+
+       // Show error message
+       function showError(elementId, message) {
+           const errorElement = document.getElementById(elementId);
+           const inputElement = document.getElementById(elementId.replace('Error', ''));
+
+           errorElement.textContent = message;
+           errorElement.style.display = 'block';
+           inputElement.classList.add('is-invalid');
+       }
+
+       // Hide error message
+       function hideError(elementId) {
+           const errorElement = document.getElementById(elementId);
+           const inputElement = document.getElementById(elementId.replace('Error', ''));
+
+           errorElement.style.display = 'none';
+           inputElement.classList.remove('is-invalid');
+       }
+
+       // Check if at least one filter input is filled
+       function hasAtLeastOneFilterInput() {
+           const dateInput = document.getElementById('Date').value;
+           const startTimeInput = document.getElementById('StartTime').value;
+           const endTimeInput = document.getElementById('EndTime').value;
+           const attendeesInput = document.getElementById('AttendeesCount').value;
+
+           return dateInput || startTimeInput || endTimeInput || attendeesInput;
+       }
+
+       // Update search button state
+       function updateSearchButtonState() {
+           const searchButton = document.getElementById('searchButton');
+           const isFormValid = validationState.date && validationState.startTime &&
+                              validationState.endTime && validationState.timeRange &&
+                              validationState.attendees;
+
+           // Check if at least one filter is filled
+           const hasFilters = hasAtLeastOneFilterInput();
+
+           if (isFormValid && hasFilters) {
+               searchButton.disabled = false;
+               searchButton.classList.remove('btn-secondary');
+               searchButton.classList.add('btn-success');
+               searchButton.style.opacity = '1';
+           } else {
+               searchButton.disabled = true;
+               searchButton.classList.remove('btn-success');
+               searchButton.classList.add('btn-secondary');
+               searchButton.style.opacity = '0.65';
+           }
+       }
+
+       // Validate date
+       function validateDate() {
+           const dateInput = document.getElementById('Date');
+           const selectedDate = new Date(dateInput.value);
+           const today = new Date();
+           today.setHours(0, 0, 0, 0);
+
+           const maxDate = new Date();
+           maxDate.setDate(today.getDate() + 60);
+
+           if (!dateInput.value) {
+               hideError('dateError');
+               validationState.date = true;
+               updateSearchButtonState();
+               return true;
+           }
+
+           if (selectedDate < today) {
+               showError('dateError', 'Date cannot be in the past');
+               validationState.date = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           if (selectedDate > maxDate) {
+               showError('dateError', 'Date cannot be more than 60 days in the future');
+               validationState.date = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           hideError('dateError');
+           validationState.date = true;
+           updateSearchButtonState();
+           return true;
+       }
+
+       // Validate start time
+       function validateStartTime() {
+           const startTimeInput = document.getElementById('StartTime');
+           let startTime = startTimeInput.value;
+
+           if (!startTime) {
+               hideError('startTimeError');
+               validationState.startTime = true;
+               // Still validate time range in case end time is filled
+               validateTimeRange();
+               updateSearchButtonState();
+               return true;
+           }
+
+           // Auto-round to nearest quarter hour
+           const roundedTime = roundToNearestQuarterHour(startTime);
+           if (roundedTime !== startTime) {
+               startTimeInput.value = roundedTime;
+               startTime = roundedTime;
+           }
+
+           const [hours, minutes] = startTime.split(':').map(Number);
+           const totalMinutes = hours * 60 + minutes;
+
+           // Check if time is within working hours (8:00 AM to 22:45)
+           const minTime = 8 * 60; // 8:00 AM in minutes
+           const maxTime = 22 * 60 + 45; // 22:45 in minutes
+
+           if (totalMinutes < minTime) {
+               showError('startTimeError', 'Start time cannot be earlier than 8:00 AM');
+               validationState.startTime = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           if (totalMinutes > maxTime) {
+               showError('startTimeError', 'Start time cannot be later than 22:45');
+               validationState.startTime = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           hideError('startTimeError');
+           validationState.startTime = true;
+           // Also validate the time range
+           validateTimeRange();
+           updateSearchButtonState();
+           return true;
+       }
+
+       // Validate end time
+       function validateEndTime() {
+           const endTimeInput = document.getElementById('EndTime');
+           let endTime = endTimeInput.value;
+
+           if (!endTime) {
+               hideError('endTimeError');
+               validationState.endTime = true;
+               // Still validate time range in case start time is filled
+               validateTimeRange();
+               updateSearchButtonState();
+               return true;
+           }
+
+           // Auto-round to nearest quarter hour
+           const roundedTime = roundToNearestQuarterHour(endTime);
+           if (roundedTime !== endTime) {
+               endTimeInput.value = roundedTime;
+               endTime = roundedTime;
+           }
+
+           const [hours, minutes] = endTime.split(':').map(Number);
+           const totalMinutes = hours * 60 + minutes;
+
+           // Check if time is within working hours (8:30 AM to 23:00)
+           const minTime = 8 * 60 + 30; // 8:30 AM in minutes
+           const maxTime = 23 * 60; // 23:00 in minutes
+
+           if (totalMinutes < minTime) {
+               showError('endTimeError', 'End time cannot be earlier than 8:30 AM');
+               validationState.endTime = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           if (totalMinutes > maxTime) {
+               showError('endTimeError', 'End time cannot be later than 23:00');
+               validationState.endTime = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           hideError('endTimeError');
+           validationState.endTime = true;
+           // Also validate the time range
+           validateTimeRange();
+           updateSearchButtonState();
+           return true;
+       }
+
+       // Validate time range (duration constraints)
+       function validateTimeRange() {
+           const startTime = document.getElementById('StartTime').value;
+           const endTime = document.getElementById('EndTime').value;
+
+           // If either time is empty, time range is considered valid
+           if (!startTime || !endTime) {
+               validationState.timeRange = true;
+               updateSearchButtonState();
+               return true;
+           }
+
+           const timeDifference = getTimeDifferenceInMinutes(startTime, endTime);
+
+           if (timeDifference <= 0) {
+               showError('endTimeError', 'End time must be after start time');
+               validationState.timeRange = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           if (timeDifference < 30) {
+               showError('endTimeError', 'Duration must be at least 30 minutes');
+               validationState.timeRange = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           if (timeDifference > 240) { // 4 hours = 240 minutes
+               showError('endTimeError', 'Duration cannot exceed 4 hours');
+               validationState.timeRange = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           // Only hide error if end time itself is valid
+           if (validationState.endTime) {
+               hideError('endTimeError');
+           }
+           validationState.timeRange = true;
+           updateSearchButtonState();
+           return true;
+       }
+
+       // Validate attendees count
+       function validateAttendees() {
+           const attendeesInput = document.getElementById('AttendeesCount');
+           const count = parseInt(attendeesInput.value);
+
+           if (!attendeesInput.value) {
+               hideError('attendeesError');
+               validationState.attendees = true;
+               updateSearchButtonState();
+               return true;
+           }
+
+           if (isNaN(count) || count < 5) {
+               showError('attendeesError', 'Attendees count must be at least 5');
+               validationState.attendees = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           if (count > 100) {
+               showError('attendeesError', 'Attendees count cannot exceed 100');
+               validationState.attendees = false;
+               updateSearchButtonState();
+               return false;
+           }
+
+           hideError('attendeesError');
+           validationState.attendees = true;
+           updateSearchButtonState();
+           return true;
+       }
+
+       // Clear all filters
+       function clearFilters() {
+           document.getElementById('filterForm').reset();
+
+           // Hide all error messages
+           hideError('dateError');
+           hideError('startTimeError');
+           hideError('endTimeError');
+           hideError('attendeesError');
+
+           // Reset validation state
+           validationState = {
+               date: true,
+               startTime: true,
+               endTime: true,
+               timeRange: true,
+               attendees: true
+           };
+
+           updateSearchButtonState();
+       }
+
+       // Initialize the form
+       document.addEventListener('DOMContentLoaded', function() {
+           setDateConstraints();
+           updateSearchButtonState();
+
+           // Add event listeners for real-time validation
+           document.getElementById('Date').addEventListener('change', validateDate);
+           document.getElementById('Date').addEventListener('input', updateSearchButtonState);
+
+           document.getElementById('StartTime').addEventListener('blur', validateStartTime);
+           document.getElementById('StartTime').addEventListener('input', function() {
+               validateStartTime();
+               updateSearchButtonState();
+           });
+
+           document.getElementById('EndTime').addEventListener('blur', validateEndTime);
+           document.getElementById('EndTime').addEventListener('input', function() {
+               validateEndTime();
+               updateSearchButtonState();
+           });
+
+           document.getElementById('AttendeesCount').addEventListener('input', function() {
+               validateAttendees();
+               updateSearchButtonState();
+           });
+
+           // Prevent form submission if validation fails
+           document.getElementById('filterForm').addEventListener('submit', function(e) {
+               // Triple check all validations before allowing submission
+               const isDateValid = validateDate();
+               const isStartTimeValid = validateStartTime();
+               const isEndTimeValid = validateEndTime();
+               const isTimeRangeValid = validateTimeRange();
+               const isAttendeesValid = validateAttendees();
+               const hasFilters = hasAtLeastOneFilterInput();
+
+               const isFormValid = isDateValid && isStartTimeValid && isEndTimeValid && isTimeRangeValid && isAttendeesValid && hasFilters;
+
+               if (!isFormValid) {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   return false;
+               }
+           });
+       });
+
+       function loadPage(page) {
+           // Check if form is valid before loading page
+           const isFormValid = validationState.date && validationState.startTime &&
+                              validationState.endTime && validationState.timeRange &&
+                              validationState.attendees;
+
+           const hasFilters = hasAtLeastOneFilterInput();
+
+           if (!isFormValid || !hasFilters) {
+               return; // Don't load page if validation fails or no filters
+           }
+
+           const form = document.getElementById('filterForm');
+           const formData = new FormData(form);
+           formData.append('page', page);
+
+           const params = new URLSearchParams(formData);
+
+           fetch(`/Home/Index?${params.toString()}`, {
+               headers: {
+                   'X-Requested-With': 'XMLHttpRequest'
+               }
+           })
+           .then(response => response.text())
+           .then(html => {
+               document.getElementById('roomsContainer').innerHTML = html;
+           })
+           .catch(error => console.error('Error:', error));
+       }
 </script>
+
+<style>
+    .error-message {
+        color: #dc3545 !important;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: none;
+    }
+
+    .info-text {
+        color: #6c757d;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        line-height: 1.2;
+    }
+
+    .form-control.is-invalid {
+        border-color: #dc3545;
+    }
+
+    .is-invalid:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+
+    .btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+</style>

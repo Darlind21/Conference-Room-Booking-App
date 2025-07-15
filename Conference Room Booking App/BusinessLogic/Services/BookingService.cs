@@ -20,7 +20,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 .FirstOrDefaultAsync(b => b.BookingCode == bookingCode && !b.IsDeleted);
         }
 
-        public async Task<Booking?> CreateBookingAsync(int roomId, BookingInfoViewModel bookingInfo, ReservationHolderViewModel reservationHolder)
+        public async Task<Booking?> CreateBookingAsync(int roomId, BookingInfoViewModel bookingInfo, ReservationHolderViewModel reservationHolder) //REVIEW:
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -115,7 +115,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             }
         }
 
-        public async Task<Booking?> UpdateBookingAsync(int bookingId, BookingInfoViewModel bookingInfo, ReservationHolderViewModel reservationHolder)
+        public async Task<Booking?> UpdateBookingAsync(int bookingId, BookingInfoViewModel bookingInfo, ReservationHolderViewModel reservationHolder) //REVIEW:
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -189,7 +189,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             }
         }
 
-        public async Task<bool> CancelBookingAsync(string bookingCode)
+        public async Task<bool> CancelBookingAsync(string bookingCode) //REVIEW:
         {
             var booking = await _context.Bookings
                 .FirstOrDefaultAsync(b => b.BookingCode == bookingCode && !b.IsDeleted);
@@ -221,14 +221,15 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime startTime, DateTime endTime, int? excludeBookingId = null)
+        public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime startTime, DateTime endTime, int? excludeBookingId = null) //REVIEW:
         {
             // Check for overlapping bookings
             var overlappingBookings = await _context.Bookings
                 .Where(b => b.RoomId == roomId &&
-                           !b.IsDeleted &&
-                           (b.Status == BookingStatus.Pending || b.Status == BookingStatus.Confirmed) &&
-                           ((b.StartTime < endTime && b.EndTime > startTime)))
+                            !b.IsDeleted &&
+                            b.Status == BookingStatus.Confirmed && //booking must be confirmed to be considered overlapping
+                            b.EndTime > startTime && // if another booking that ends before the desired start time exists
+                            b.StartTime < endTime) // and also if that same booking starts before desired end time it is considered overlapping 
                 .ToListAsync();
 
             // Exclude the current booking if updating
@@ -252,7 +253,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             return !unavailabilityPeriods.Any();
         }
 
-        private async Task<string> GenerateUniqueBookingCodeAsync()
+        private async Task<string> GenerateUniqueBookingCodeAsync() //TODO: FIX METHOD
         {
             string bookingCode;
             bool exists;
@@ -267,7 +268,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             return bookingCode;
         }
 
-        private string GenerateRandomCode(int length)
+        private string GenerateRandomCode(int length) //TODO: fIX METHOD
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             var random = new Random();
@@ -275,35 +276,4 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
     }
-
-    //public class BookingService(ApplicationDbContext context) : IBookingService
-    //{
-    //    public async Task<List<BookingDetailVM>> GetBookingsPerRoomAsync(int roomId)
-    //    {
-    //        var bookings = await context.Bookings
-    //            .Where(x => x.RoomId == roomId)
-    //            .Include(x => x.ReservationHolder)
-    //            .ToListAsync();
-
-    //        var bookingDetailVMList = new List<BookingDetailVM>();
-
-    //        foreach (var booking in bookings)
-    //        {
-    //            var bookingVM = new BookingDetailVM
-    //            {
-    //                Id = booking.Id,
-    //                BookingCode = booking.BookingCode,
-    //                AttendeesCount = booking.AttendeesCount,
-    //                StartTime = booking.StartTime,
-    //                EndTime = booking.EndTime,
-    //                Status = booking.Status,
-    //                Notes = booking.Notes
-    //            };
-
-    //            bookingDetailVMList.Add(bookingVM);
-    //        }
-
-    //        return bookingDetailVMList;
-    //    }
-    //}
 }

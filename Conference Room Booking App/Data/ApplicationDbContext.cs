@@ -53,6 +53,7 @@ namespace Conference_Room_Booking_App.Data
                 .HasOne(b => b.Room)
                 .WithMany(r => r.Bookings);
 
+            //BUG:
             builder.Entity<Booking>()
                 .HasOne(b => b.ReservationHolder)
                 .WithOne(rh => rh.Booking)
@@ -67,7 +68,7 @@ namespace Conference_Room_Booking_App.Data
                 .OnDelete(DeleteBehavior.NoAction);
 
 
-
+            //BUG:
             builder.Entity<ReservationHolder>()
                 .HasOne(rh => rh.Booking)
                 .WithOne(b => b.ReservationHolder)

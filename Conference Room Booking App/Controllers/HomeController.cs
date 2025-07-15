@@ -10,7 +10,9 @@ namespace Conference_Room_Booking_App.Controllers
 {
     public class HomeController(IBookingService _bookingService, IRoomService _roomService) : Controller
     {
-        public async Task<IActionResult> Index(HomeViewModel model, int page = 1)
+        public async Task<IActionResult> Index(HomeViewModel model, int page = 1) //REVIEW:
+            //Even though the view Index.cshtml doesnt explicitly say "Send a HomeViewModel to the controller", ASP.NET does that automatically via model-binding
+            //
         {
             var rooms = await _roomService.GetFilteredRoomsAsync(
                 model.StartTime,
@@ -32,6 +34,7 @@ namespace Conference_Room_Booking_App.Controllers
                     PhotoUrl = r.PhotoUrl,
                     AvailableTimeSlots = r.AvailableTimeSlots
                 }).ToList(),
+
                 CurrentPage = page,
                 TotalPages = rooms.TotalPages,
                 TotalItems = rooms.TotalItems,
@@ -47,7 +50,7 @@ namespace Conference_Room_Booking_App.Controllers
         }
 
         [HttpPost, HttpGet]
-        public async Task<IActionResult> CheckBookingStatus(string bookingCode)
+        public async Task<IActionResult> CheckBookingStatus(string bookingCode) //REVIEW: Check review below in the code 
         {
             if (string.IsNullOrEmpty(bookingCode))
             {
@@ -82,8 +85,9 @@ namespace Conference_Room_Booking_App.Controllers
                 CanCancel = booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Confirmed
             };
 
+            //REVIEW: "GET" should be "POST" ?????
             // If this is a POST request (redirect from booking creation), redirect to GET to avoid form resubmission
-            if (HttpContext.Request.Method == "GET ")
+            if (HttpContext.Request.Method == "POST")
             {
                 return RedirectToAction("CheckBookingStatus", new { bookingCode = bookingCode });
             }
@@ -91,7 +95,7 @@ namespace Conference_Room_Booking_App.Controllers
             return View("BookingStatus", viewModel);
         }
 
-        private string GetStatusColor(BookingStatus status)
+        private string GetStatusColor(BookingStatus status) //REVIEW:
         {
             return status switch
             {

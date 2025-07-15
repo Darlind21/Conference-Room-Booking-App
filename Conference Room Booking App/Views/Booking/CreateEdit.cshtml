@@ -43,6 +43,7 @@
                                 <h4>@Model.RoomDetail.Name</h4>
                                 <p class="text-muted mb-2">Room Code: @Model.RoomDetail.RoomCode</p>
                                 <p class="text-muted mb-3">Maximum Capacity: @Model.RoomDetail.MaxCapacity people</p>
+                                <p class="text-muted mb-3">Working Hours: 8:00 AM - 11:00 PM</p>
 
                                 @if (Model.RoomDetail.AvailableTimeSlots.Any())
                                 {
@@ -74,34 +75,59 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="BookingDate" class="form-label">
+                                        <i class="fas fa-calendar me-2"></i>Date <span class="text-danger">*</span>
+                                    </label>
+                                    <input id="BookingDate" name="BookingDate" type="date" class="form-control" required>
+                                    <div id="dateError" class="error-message text-danger"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="StartTime" class="form-label">
+                                        <i class="fas fa-clock me-2"></i>Start Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input id="StartTime" name="StartTime" type="time" class="form-control" step="900" required>
+                                    <div class="form-text">Must be on quarter hour (e.g., 8:00, 8:15, 8:30, 8:45)</div>
+                                    <div id="startTimeError" class="error-message text-danger"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="EndTime" class="form-label">
+                                        End Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input id="EndTime" name="EndTime" type="time" class="form-control" step="900" required>
+                                    <div class="form-text">Must be on quarter hour (e.g., 8:00, 8:15, 8:30, 8:45)</div>
+                                    <div id="endTimeError" class="error-message text-danger"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="BookingInfo.AttendeesCount" class="form-label">
-                                        <i class="fas fa-users me-2"></i>Number of Attendees
+                                        <i class="fas fa-users me-2"></i>Number of Attendees <span class="text-danger">*</span>
                                     </label>
-                                    <input asp-for="BookingInfo.AttendeesCount" class="form-control" type="number" min="1" max="@Model.RoomDetail.MaxCapacity" required>
+                                    <input asp-for="BookingInfo.AttendeesCount" class="form-control" type="number" min="5" max="@Model.RoomDetail.MaxCapacity" required>
                                     <span asp-validation-for="BookingInfo.AttendeesCount" class="text-danger"></span>
-                                    <div class="form-text">Maximum capacity: @Model.RoomDetail.MaxCapacity people</div>
+                                    <div id="attendeesError" class="error-message text-danger"></div>
+                                    <div class="form-text">Minimum: 5 people, Maximum: @Model.RoomDetail.MaxCapacity people</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 d-flex align-items-end">
                                 <div class="mb-3">
-                                    <label class="form-label">
-                                        <i class="fas fa-clock me-2"></i>Duration
-                                    </label>
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <label asp-for="BookingInfo.StartTime" class="form-label">Start Time</label>
-                                            <input asp-for="BookingInfo.StartTime" class="form-control" type="datetime-local" required>
-                                            <span asp-validation-for="BookingInfo.StartTime" class="text-danger"></span>
-                                        </div>
-                                        <div class="col-6">
-                                            <label asp-for="BookingInfo.EndTime" class="form-label">End Time</label>
-                                            <input asp-for="BookingInfo.EndTime" class="form-control" type="datetime-local" required>
-                                            <span asp-validation-for="BookingInfo.EndTime" class="text-danger"></span>
-                                        </div>
-                                    </div>
+                                    <button type="button" class="btn btn-success" id="checkAvailabilityBtn">
+                                        <i class="fas fa-search me-2"></i>Check Availability
+                                    </button>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div id="availabilityResult" class="mt-2"></div>
                             </div>
                         </div>
                         <div class="row">
@@ -133,41 +159,56 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="ReservationHolder.FirstName" class="form-label">First Name</label>
+                                    <label asp-for="ReservationHolder.FirstName" class="form-label">
+                                        First Name <span class="text-danger">*</span>
+                                    </label>
                                     <input asp-for="ReservationHolder.FirstName" class="form-control" required>
                                     <span asp-validation-for="ReservationHolder.FirstName" class="text-danger"></span>
+                                    <div id="firstNameError" class="error-message text-danger"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="ReservationHolder.LastName" class="form-label">Last Name</label>
+                                    <label asp-for="ReservationHolder.LastName" class="form-label">
+                                        Last Name <span class="text-danger">*</span>
+                                    </label>
                                     <input asp-for="ReservationHolder.LastName" class="form-control" required>
                                     <span asp-validation-for="ReservationHolder.LastName" class="text-danger"></span>
+                                    <div id="lastNameError" class="error-message text-danger"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="ReservationHolder.Email" class="form-label">Email Address</label>
+                                    <label asp-for="ReservationHolder.Email" class="form-label">
+                                        Email Address <span class="text-danger">*</span>
+                                    </label>
                                     <input asp-for="ReservationHolder.Email" class="form-control" type="email" required>
                                     <span asp-validation-for="ReservationHolder.Email" class="text-danger"></span>
+                                    <div id="emailError" class="error-message text-danger"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="ReservationHolder.PhoneNumber" class="form-label">Phone Number</label>
+                                    <label asp-for="ReservationHolder.PhoneNumber" class="form-label">
+                                        Phone Number <span class="text-danger">*</span>
+                                    </label>
                                     <input asp-for="ReservationHolder.PhoneNumber" class="form-control" type="tel" required>
                                     <span asp-validation-for="ReservationHolder.PhoneNumber" class="text-danger"></span>
+                                    <div id="phoneNumberError" class="error-message text-danger"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="ReservationHolder.IdCardNumber" class="form-label">ID Card Number</label>
+                                    <label asp-for="ReservationHolder.IdCardNumber" class="form-label">
+                                        ID Card Number <span class="text-danger">*</span>
+                                    </label>
                                     <input asp-for="ReservationHolder.IdCardNumber" class="form-control" required>
                                     <span asp-validation-for="ReservationHolder.IdCardNumber" class="text-danger"></span>
+                                    <div id="idCardNumberError" class="error-message text-danger"></div>
                                 </div>
                             </div>
                         </div>
@@ -183,7 +224,7 @@
                     <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Back to Home
                     </a>
-                    <button type="submit" class="btn btn-primary btn-lg">
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                         <i class="fas fa-check me-2"></i>@(Model.IsEdit ? "Update Booking" : "Submit Booking")
                     </button>
                 </div>
@@ -195,33 +236,651 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
+    <style>
+        .error-message {
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
+
+        .availability-success {
+            color: #198754;
+            background-color: #d1eddd;
+            border: 1px solid #badbcc;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+        }
+
+        .availability-error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+        }
+    </style>
+
     <script>
-        // Set minimum date/time to current date/time
         document.addEventListener('DOMContentLoaded', function() {
-            const now = new Date();
-            const minDateTime = now.toISOString().slice(0, 16);
+            const bookingDateInput = document.getElementById('BookingDate');
+            const startTimeInput = document.getElementById('StartTime');
+            const endTimeInput = document.getElementById('EndTime');
+            const attendeesInput = document.getElementById('BookingInfo_AttendeesCount');
+            const checkAvailabilityBtn = document.getElementById('checkAvailabilityBtn');
+            const availabilityResult = document.getElementById('availabilityResult');
+            const submitBtn = document.getElementById('submitBtn');
+            const bookingForm = document.getElementById('bookingForm');
 
-            const startTimeInput = document.getElementById('BookingInfo_StartTime');
-            const endTimeInput = document.getElementById('BookingInfo_EndTime');
+            // Reservation holder inputs
+            const firstNameInput = document.getElementById('ReservationHolder_FirstName');
+            const lastNameInput = document.getElementById('ReservationHolder_LastName');
+            const emailInput = document.getElementById('ReservationHolder_Email');
+            const phoneNumberInput = document.getElementById('ReservationHolder_PhoneNumber');
+            const idCardNumberInput = document.getElementById('ReservationHolder_IdCardNumber');
 
-            if (startTimeInput) {
-                startTimeInput.min = minDateTime;
+            // Set minimum date to today and maximum to 2 months in the future
+            const today = new Date();
+            const twoMonthsFromNow = new Date();
+            twoMonthsFromNow.setMonth(today.getMonth() + 2);
+
+            bookingDateInput.min = today.toISOString().split('T')[0];
+            bookingDateInput.max = twoMonthsFromNow.toISOString().split('T')[0];
+
+            // Helper function to check if time is on quarter hour
+            function isQuarterHour(timeString) {
+                const [hours, minutes] = timeString.split(':').map(Number);
+                return minutes % 15 === 0;
             }
-            if (endTimeInput) {
-                endTimeInput.min = minDateTime;
+
+            // Helper function to convert time to minutes
+            function timeToMinutes(timeString) {
+                const [hours, minutes] = timeString.split(':').map(Number);
+                return hours * 60 + minutes;
             }
 
-            // Update end time minimum when start time changes
-            startTimeInput?.addEventListener('change', function() {
-                if (endTimeInput) {
-                    endTimeInput.min = this.value;
-                    if (endTimeInput.value && endTimeInput.value <= this.value) {
-                        const startDate = new Date(this.value);
-                        startDate.setHours(startDate.getHours() + 1);
-                        endTimeInput.value = startDate.toISOString().slice(0, 16);
+            // Helper function to convert minutes to time string
+            function minutesToTime(minutes) {
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+            }
+
+            // Round time to nearest quarter hour
+            function roundToQuarterHour(timeString) {
+                const [hours, minutes] = timeString.split(':').map(Number);
+                const totalMinutes = hours * 60 + minutes;
+                const roundedMinutes = Math.round(totalMinutes / 15) * 15;
+                return minutesToTime(roundedMinutes);
+            }
+
+            // Auto-correct times to quarter hour on blur
+            function autoCorrectTime(input) {
+                if (input.value) {
+                    const correctedTime = roundToQuarterHour(input.value);
+                    if (correctedTime !== input.value) {
+                        input.value = correctedTime;
                     }
                 }
+            }
+
+            // Helper function to create local datetime string without timezone conversion
+            function createLocalDateTimeString(dateString, timeString) {
+                // Format: YYYY-MM-DDTHH:MM:SS (without 'Z' to avoid UTC conversion)
+                return `${dateString}T${timeString}:00`;
+            }
+
+            // Validation functions for booking info
+            function validateDate() {
+                const dateValue = bookingDateInput.value;
+                const dateError = document.getElementById('dateError');
+
+                if (!dateValue) {
+                    dateError.textContent = 'Date is required';
+                    return false;
+                }
+
+                const selectedDate = new Date(dateValue);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const twoMonthsFromNow = new Date();
+                twoMonthsFromNow.setMonth(today.getMonth() + 2);
+                twoMonthsFromNow.setHours(23, 59, 59, 999);
+
+                if (selectedDate < today) {
+                    dateError.textContent = 'Date cannot be in the past';
+                    return false;
+                }
+
+                if (selectedDate > twoMonthsFromNow) {
+                    dateError.textContent = 'Date cannot be more than 2 months in the future';
+                    return false;
+                }
+
+                dateError.textContent = '';
+                return true;
+            }
+
+            function validateTime(timeInput, errorId, timeType) {
+                const timeValue = timeInput.value;
+                const errorElement = document.getElementById(errorId);
+
+                if (!timeValue) {
+                    errorElement.textContent = `${timeType} time is required`;
+                    return false;
+                }
+
+                // Check if time is on quarter hour
+                if (!isQuarterHour(timeValue)) {
+                    errorElement.textContent = `${timeType} time must be on quarter hour (e.g., 12:00, 12:15, 12:30, 12:45)`;
+                    return false;
+                }
+
+                const timeInMinutes = timeToMinutes(timeValue);
+                const workingStart = 8 * 60; // 8:00 AM
+                const workingEnd = 23 * 60; // 11:00 PM
+
+                if (timeInMinutes < workingStart || timeInMinutes > workingEnd) {
+                    errorElement.textContent = `${timeType} time must be between 8:00 AM and 11:00 PM`;
+                    return false;
+                }
+
+                errorElement.textContent = '';
+                return true;
+            }
+
+            function validateTimeRange() {
+                const startTimeError = document.getElementById('startTimeError');
+                const endTimeError = document.getElementById('endTimeError');
+
+                if (!startTimeInput.value || !endTimeInput.value) {
+                    return false;
+                }
+
+                const startMinutes = timeToMinutes(startTimeInput.value);
+                const endMinutes = timeToMinutes(endTimeInput.value);
+
+                if (endMinutes <= startMinutes) {
+                    endTimeError.textContent = 'End time must be after start time';
+                    return false;
+                }
+
+                // Check minimum duration (30 minutes)
+                const durationMinutes = endMinutes - startMinutes;
+                if (durationMinutes < 30) {
+                    endTimeError.textContent = 'Minimum booking duration is 30 minutes';
+                    return false;
+                }
+
+                // Check maximum duration (4 hours = 240 minutes)
+                if (durationMinutes > 240) {
+                    endTimeError.textContent = 'Maximum booking duration is 4 hours';
+                    return false;
+                }
+
+                endTimeError.textContent = '';
+                return true;
+            }
+
+            function validateAttendees() {
+                const attendeesValue = attendeesInput.value;
+                const attendeesError = document.getElementById('attendeesError');
+                const maxCapacity = @Model.RoomDetail.MaxCapacity;
+
+                if (!attendeesValue) {
+                    attendeesError.textContent = 'Number of attendees is required';
+                    return false;
+                }
+
+                const attendeesCount = parseInt(attendeesValue);
+
+                if (attendeesCount < 5) {
+                    attendeesError.textContent = 'Minimum 5 attendees required';
+                    return false;
+                }
+
+                if (attendeesCount > maxCapacity) {
+                    attendeesError.textContent = `Maximum ${maxCapacity} attendees allowed`;
+                    return false;
+                }
+
+                attendeesError.textContent = '';
+                return true;
+            }
+
+            // Validation functions for reservation holder
+            function validateFirstName() {
+                const firstNameValue = firstNameInput.value.trim();
+                const firstNameError = document.getElementById('firstNameError');
+
+                if (!firstNameValue) {
+                    firstNameError.textContent = 'First name is required';
+                    return false;
+                }
+
+                if (firstNameValue.length < 2) {
+                    firstNameError.textContent = 'First name must be at least 2 characters long';
+                    return false;
+                }
+
+                if (firstNameValue.length > 50) {
+                    firstNameError.textContent = 'First name cannot exceed 50 characters';
+                    return false;
+                }
+
+                // Check for numbers or special characters (only letters, spaces, hyphens, apostrophes allowed)
+                const hasInvalidChars = [...firstNameValue].some(char => {
+                    return !(
+                        (char >= 'a' && char <= 'z') ||
+                        (char >= 'A' && char <= 'Z') ||
+                        char === ' ' ||
+                        char === '-' ||
+                        char === '\''
+                    );
+                });
+
+                if (hasInvalidChars) {
+                    firstNameError.textContent = 'First name can only contain letters, spaces, hyphens, and apostrophes';
+                    return false;
+                }
+
+                firstNameError.textContent = '';
+                return true;
+            }
+
+            function validateLastName() {
+                const lastNameValue = lastNameInput.value.trim();
+                const lastNameError = document.getElementById('lastNameError');
+
+                if (!lastNameValue) {
+                    lastNameError.textContent = 'Last name is required';
+                    return false;
+                }
+
+                if (lastNameValue.length < 2) {
+                    lastNameError.textContent = 'Last name must be at least 2 characters long';
+                    return false;
+                }
+
+                if (lastNameValue.length > 50) {
+                    lastNameError.textContent = 'Last name cannot exceed 50 characters';
+                    return false;
+                }
+
+                // Check for numbers or special characters (only letters, spaces, hyphens, apostrophes allowed)
+                const hasInvalidChars = [...lastNameValue].some(char => {
+                    return !(
+                        (char >= 'a' && char <= 'z') ||
+                        (char >= 'A' && char <= 'Z') ||
+                        char === ' ' ||
+                        char === '-' ||
+                        char === '\''
+                    );
+                });
+
+                if (hasInvalidChars) {
+                    lastNameError.textContent = 'Last name can only contain letters, spaces, hyphens, and apostrophes';
+                    return false;
+                }
+
+                lastNameError.textContent = '';
+                return true;
+            }
+
+            function validateEmail() {
+                const emailValue = emailInput.value.trim();
+                const emailError = document.getElementById('emailError');
+
+                if (!emailValue) {
+                    emailError.textContent = 'Email address is required';
+                    return false;
+                }
+
+                const atIndex = emailValue.indexOf('@@');
+                const lastDotIndex = emailValue.lastIndexOf('.');
+
+                if (atIndex === -1 || atIndex === 0 || atIndex === emailValue.length - 1) {
+                    emailError.textContent = 'Please enter a valid email address';
+                    return false;
+                }
+
+                if (lastDotIndex === -1 || lastDotIndex <= atIndex + 1 || lastDotIndex === emailValue.length - 1) {
+                    emailError.textContent = 'Please enter a valid email address';
+                    return false;
+                }
+
+                if (emailValue.indexOf('@@', atIndex + 1) !== -1) {
+                    emailError.textContent = 'Please enter a valid email address';
+                    return false;
+                }
+
+                // Check for invalid characters
+                const invalidChars = ['<', '>', '"', '\'', '\\', '/', '?', '#', '%', '&', '=', '+', '(', ')', '[', ']', '{', '}', '|', '^', '~', '`', ' '];
+                const hasInvalidChars = invalidChars.some(char => emailValue.includes(char));
+
+                if (hasInvalidChars) {
+                    emailError.textContent = 'Email address contains invalid characters';
+                    return false;
+                }
+
+                // Max length for emails is 254 characters
+                if (emailValue.length > 254) {
+                    emailError.textContent = 'Email address is too long';
+                    return false;
+                }
+
+                emailError.textContent = '';
+                return true;
+            }
+
+
+            function validatePhoneNumber() {
+                const phoneValue = phoneNumberInput.value.trim();
+                const phoneError = document.getElementById('phoneNumberError');
+
+                if (!phoneValue) {
+                    phoneError.textContent = 'Phone number is required';
+                    return false;
+                }
+
+                // Remove all non-numeric characters for validation
+                const numericOnly = phoneValue.replace(/[^\d]/g, '');
+
+                if (numericOnly.length < 7) {
+                    phoneError.textContent = 'Phone number must be at least 7 digits';
+                    return false;
+                }
+
+                if (numericOnly.length > 15) {
+                    phoneError.textContent = 'Phone number cannot exceed 15 digits';
+                    return false;
+                }
+
+                // Check for valid characters (only digits, spaces, hyphens, parentheses, plus sign)
+                const hasInvalidChars = [...phoneValue].some(char => {
+                    return !(
+                        (char >= '0' && char <= '9') ||
+                        char === ' ' ||
+                        char === '-' ||
+                        char === '(' ||
+                        char === ')' ||
+                        char === '+' ||
+                        char === '.'
+                    );
+                });
+
+                if (hasInvalidChars) {
+                    phoneError.textContent = 'Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign';
+                    return false;
+                }
+
+                phoneError.textContent = '';
+                return true;
+            }
+
+            function validateIdCardNumber() {
+                const idValue = idCardNumberInput.value.trim();
+                const idError = document.getElementById('idCardNumberError');
+
+                if (!idValue) {
+                    idError.textContent = 'ID card number is required';
+                    return false;
+                }
+
+                if (idValue.length < 5) {
+                    idError.textContent = 'ID card number must be at least 5 characters long';
+                    return false;
+                }
+
+                if (idValue.length > 20) {
+                    idError.textContent = 'ID card number cannot exceed 20 characters';
+                    return false;
+                }
+
+                // Check for valid characters (alphanumeric only)
+                const hasInvalidChars = [...idValue].some(char => {
+                    return !(
+                        (char >= '0' && char <= '9') ||
+                        (char >= 'a' && char <= 'z') ||
+                        (char >= 'A' && char <= 'Z')
+                    );
+                });
+
+                if (hasInvalidChars) {
+                    idError.textContent = 'ID card number can only contain letters and numbers';
+                    return false;
+                }
+
+                idError.textContent = '';
+                return true;
+            }
+
+            function validateBookingFields() {
+                const isDateValid = validateDate();
+                const isStartTimeValid = validateTime(startTimeInput, 'startTimeError', 'Start');
+                const isEndTimeValid = validateTime(endTimeInput, 'endTimeError', 'End');
+                const isTimeRangeValid = validateTimeRange();
+                const isAttendeesValid = validateAttendees();
+
+                return isDateValid && isStartTimeValid && isEndTimeValid && isTimeRangeValid && isAttendeesValid;
+            }
+
+            function validateReservationHolderFields() {
+                const isFirstNameValid = validateFirstName();
+                const isLastNameValid = validateLastName();
+                const isEmailValid = validateEmail();
+                const isPhoneValid = validatePhoneNumber();
+                const isIdCardValid = validateIdCardNumber();
+
+                return isFirstNameValid && isLastNameValid && isEmailValid && isPhoneValid && isIdCardValid;
+            }
+
+            function validateAllFields() {
+                return validateBookingFields() && validateReservationHolderFields();
+            }
+
+            // Event listeners for booking info validation
+            bookingDateInput.addEventListener('blur', validateDate);
+
+            startTimeInput.addEventListener('blur', function() {
+                autoCorrectTime(this);
+                validateTime(this, 'startTimeError', 'Start');
+                validateTimeRange();
             });
+
+            endTimeInput.addEventListener('blur', function() {
+                autoCorrectTime(this);
+                validateTime(this, 'endTimeError', 'End');
+                validateTimeRange();
+            });
+
+            attendeesInput.addEventListener('blur', validateAttendees);
+
+            // Event listeners for reservation holder validation
+            firstNameInput.addEventListener('blur', validateFirstName);
+            lastNameInput.addEventListener('blur', validateLastName);
+            emailInput.addEventListener('blur', validateEmail);
+            phoneNumberInput.addEventListener('blur', validatePhoneNumber);
+            idCardNumberInput.addEventListener('blur', validateIdCardNumber);
+
+            // Real-time validation on input
+            firstNameInput.addEventListener('input', function() {
+                // Clear error on typing
+                const firstNameError = document.getElementById('firstNameError');
+                if (firstNameError.textContent) {
+                    setTimeout(validateFirstName, 500);
+                }
+            });
+
+            lastNameInput.addEventListener('input', function() {
+                const lastNameError = document.getElementById('lastNameError');
+                if (lastNameError.textContent) {
+                    setTimeout(validateLastName, 500);
+                }
+            });
+
+            emailInput.addEventListener('input', function() {
+                const emailError = document.getElementById('emailError');
+                if (emailError.textContent) {
+                    setTimeout(validateEmail, 500);
+                }
+            });
+
+            phoneNumberInput.addEventListener('input', function() {
+                const phoneError = document.getElementById('phoneNumberError');
+                if (phoneError.textContent) {
+                    setTimeout(validatePhoneNumber, 500);
+                }
+            });
+
+            idCardNumberInput.addEventListener('input', function() {
+                const idError = document.getElementById('idCardNumberError');
+                if (idError.textContent) {
+                    setTimeout(validateIdCardNumber, 500);
+                }
+            });
+
+            // Check availability function
+            async function checkAvailability() {
+                if (!validateBookingFields()) {
+                    availabilityResult.innerHTML = '<div class="availability-error">Please fix the validation errors above before checking availability.</div>';
+                    return false;
+                }
+
+                const roomId = @Model.RoomDetail.Id;
+                const bookingDate = bookingDateInput.value;
+                const startTime = startTimeInput.value;
+                const endTime = endTimeInput.value;
+                const excludeBookingId = @(Model.IsEdit? Model.BookingId?.ToString() ?? "null" : "null");
+
+                // Create local datetime strings without timezone conversion
+                const startDateTimeString = createLocalDateTimeString(bookingDate, startTime);
+                const endDateTimeString = createLocalDateTimeString(bookingDate, endTime);
+
+                try {
+                    checkAvailabilityBtn.disabled = true;
+                    checkAvailabilityBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+
+                    const response = await fetch('@Url.Action("CheckAvailability", "Booking")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({
+                            roomId: roomId,
+                            startTime: startDateTimeString,
+                            endTime: endDateTimeString,
+                            excludeBookingId: excludeBookingId
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.isAvailable) {
+                        availabilityResult.innerHTML = '<div class="availability-success"><i class="fas fa-check-circle me-2"></i>Room is available for this timeslot</div>';
+                        return true;
+                    } else {
+                        const message = result.message || 'Room is not available for this timeslot';
+                        availabilityResult.innerHTML = `<div class="availability-error"><i class="fas fa-times-circle me-2"></i>${message}</div>`;
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Error checking availability:', error);
+                    availabilityResult.innerHTML = '<div class="availability-error"><i class="fas fa-exclamation-triangle me-2"></i>Error checking availability. Please try again.</div>';
+                    return false;
+                } finally {
+                    checkAvailabilityBtn.disabled = false;
+                    checkAvailabilityBtn.innerHTML = '<i class="fas fa-search me-2"></i>Check Availability';
+                }
+            }
+
+            // Check availability button click
+            checkAvailabilityBtn.addEventListener('click', checkAvailability);
+
+            // Form submission with availability check
+            bookingForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                if (!validateAllFields()) {
+                    // Show error message for incomplete form
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'alert alert-danger mt-3';
+                    errorMessage.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Please fix all validation errors before submitting the form.';
+                    
+                    // Remove any existing error messages
+                    const existingError = document.querySelector('.alert-danger');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                    
+                    // Add error message after the form
+                    bookingForm.appendChild(errorMessage);
+                    
+                    // Scroll to first error
+                    const firstError = document.querySelector('.error-message:not(:empty)');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking availability...';
+
+                const isAvailable = await checkAvailability();
+
+                if (isAvailable) {
+                    // Update the hidden fields with the combined date and time
+                    const bookingDate = bookingDateInput.value;
+                    const startTime = startTimeInput.value;
+                    const endTime = endTimeInput.value;
+
+                    // Create local datetime strings without timezone conversion
+                    const startDateTimeString = createLocalDateTimeString(bookingDate, startTime);
+                    const endDateTimeString = createLocalDateTimeString(bookingDate, endTime);
+
+                    // Create hidden inputs for the actual form submission
+                    const startInput = document.createElement('input');
+                    startInput.type = 'hidden';
+                    startInput.name = 'BookingInfo.StartTime';
+                    startInput.value = startDateTimeString;
+
+                    const endInput = document.createElement('input');
+                    endInput.type = 'hidden';
+                    endInput.name = 'BookingInfo.EndTime';
+                    endInput.value = endDateTimeString;
+
+                    bookingForm.appendChild(startInput);
+                    bookingForm.appendChild(endInput);
+
+                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>@(Model.IsEdit ? "Update Booking" : "Submit Booking")';
+                    bookingForm.submit();
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>@(Model.IsEdit ? "Update Booking" : "Submit Booking")';
+                }
+            });
+
+            // Clear availability result when inputs change
+            [bookingDateInput, startTimeInput, endTimeInput].forEach(input => {
+                input.addEventListener('change', function() {
+                    availabilityResult.innerHTML = '';
+                });
+            });
+
+            // Initialize with existing values if editing
+            @if (Model.IsEdit && Model.BookingInfo?.StartTime != null)
+            {
+                        <text>
+                        const existingStartTime = new Date('@Model.BookingInfo.StartTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+                        const existingEndTime = new Date('@Model.BookingInfo.EndTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+
+                        bookingDateInput.value = existingStartTime.toISOString().split('T')[0];
+                        startTimeInput.value = existingStartTime.toTimeString().slice(0, 5);
+                        endTimeInput.value = existingEndTime.toTimeString().slice(0, 5);
+                        </text>
+            }
         });
     </script>
 }
