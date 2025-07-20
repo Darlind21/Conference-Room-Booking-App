@@ -125,7 +125,8 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                     .Include(b => b.ReservationHolder)
                     .FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
 
-                if (booking == null || booking.Status != BookingStatus.Pending)
+                if (booking == null || booking.Status == BookingStatus.Cancelled || booking.Status == BookingStatus.Rejected)
+                    //if booking is cancelled or rejected it cannot be updated
                 {
                     return null;
                 }
@@ -154,6 +155,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 booking.StartTime = bookingInfo.StartTime;
                 booking.EndTime = bookingInfo.EndTime;
                 booking.Notes = bookingInfo.Notes;
+                booking.Status = BookingStatus.Pending;
 
                 // Update reservation holder information
                 booking.ReservationHolder.FirstName = reservationHolder.FirstName;
@@ -274,6 +276,11 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             var random = new Random();
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        public Task<List<Booking>> GetBookingsForUserAsync(int roomId) //TODO: Implement
+        {
+            throw new NotImplementedException();
         }
     }
 }

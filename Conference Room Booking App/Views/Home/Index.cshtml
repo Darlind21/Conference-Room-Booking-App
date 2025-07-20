@@ -1,6 +1,7 @@
 ﻿@model Conference_Room_Booking_App.Data.ViewModels.HomeViewModel
 @{
     ViewData["Title"] = "Conference Room Booking";
+    //FEATURE: Make it so the filter values remain in the input field after filtering
 }
 <div class="container mt-4">
     <!-- Booking Code Check Section -->
@@ -425,9 +426,95 @@
            updateSearchButtonState();
        }
 
+           function preserveFilterValues() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Set form values from URL parameters
+        const dateParam = urlParams.get('Date');
+        if (dateParam) {
+            document.getElementById('Date').value = dateParam;
+        }
+
+        const startTimeParam = urlParams.get('StartTime');
+        if (startTimeParam) {
+            document.getElementById('StartTime').value = startTimeParam;
+        }
+
+        const endTimeParam = urlParams.get('EndTime');
+        if (endTimeParam) {
+            document.getElementById('EndTime').value = endTimeParam;
+        }
+
+        const attendeesParam = urlParams.get('AttendeesCount');
+        if (attendeesParam) {
+            document.getElementById('AttendeesCount').value = attendeesParam;
+        }
+
+        // Validate all fields after setting values
+        if (dateParam) validateDate();
+        if (startTimeParam) validateStartTime();
+        if (endTimeParam) validateEndTime();
+        if (attendeesParam) validateAttendees();
+
+        // Update search button state
+        updateSearchButtonState();
+    }
+
+    // Then modify your existing DOMContentLoaded event listener to include the call:
+    document.addEventListener('DOMContentLoaded', function() {
+        setDateConstraints();
+
+        // ADD THIS LINE - Preserve filter values from URL parameters
+        preserveFilterValues();
+
+        updateSearchButtonState();
+
+        // Add event listeners for real-time validation
+        document.getElementById('Date').addEventListener('change', validateDate);
+        document.getElementById('Date').addEventListener('input', updateSearchButtonState);
+
+        document.getElementById('StartTime').addEventListener('blur', validateStartTime);
+        document.getElementById('StartTime').addEventListener('input', function() {
+            validateStartTime();
+            updateSearchButtonState();
+        });
+
+        document.getElementById('EndTime').addEventListener('blur', validateEndTime);
+        document.getElementById('EndTime').addEventListener('input', function() {
+            validateEndTime();
+            updateSearchButtonState();
+        });
+
+        document.getElementById('AttendeesCount').addEventListener('input', function() {
+            validateAttendees();
+            updateSearchButtonState();
+        });
+
+        // Prevent form submission if validation fails
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            // Triple check all validations before allowing submission
+            const isDateValid = validateDate();
+            const isStartTimeValid = validateStartTime();
+            const isEndTimeValid = validateEndTime();
+            const isTimeRangeValid = validateTimeRange();
+            const isAttendeesValid = validateAttendees();
+            const hasFilters = hasAtLeastOneFilterInput();
+
+            const isFormValid = isDateValid && isStartTimeValid && isEndTimeValid && isTimeRangeValid && isAttendeesValid && hasFilters;
+
+            if (!isFormValid) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+    });
+
+
        // Initialize the form
        document.addEventListener('DOMContentLoaded', function() {
            setDateConstraints();
+           preserveFilterValues();
            updateSearchButtonState();
 
            // Add event listeners for real-time validation
@@ -471,35 +558,69 @@
            });
        });
 
-       function loadPage(page) {
-           // Check if form is valid before loading page
-           const isFormValid = validationState.date && validationState.startTime &&
-                              validationState.endTime && validationState.timeRange &&
-                              validationState.attendees;
+    function loadPage(page) {
+        // Get current form data
+        const form = document.getElementById('filterForm');
+        const formData = new FormData(form);
 
-           const hasFilters = hasAtLeastOneFilterInput();
+        // Check if we have any filter values (either from current inputs or URL parameters)
+        const hasCurrentFilters = hasAtLeastOneFilterInput();
 
-           if (!isFormValid || !hasFilters) {
-               return; // Don't load page if validation fails or no filters
-           }
+        // Also check URL parameters in case filters were applied but form was cleared
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasUrlFilters = urlParams.has('Date') || urlParams.has('StartTime') ||
+                             urlParams.has('EndTime') || urlParams.has('AttendeesCount');
 
-           const form = document.getElementById('filterForm');
-           const formData = new FormData(form);
-           formData.append('page', page);
+        // If we have current form values, validate them
+        if (hasCurrentFilters) {
+            const isFormValid = validationState.date && validationState.startTime &&
+                               validationState.endTime && validationState.timeRange &&
+                               validationState.attendees;
 
-           const params = new URLSearchParams(formData);
+            if (!isFormValid) {
+                console.log('Form validation failed');
+                return;
+            }
+        }
 
-           fetch(`/Home/Index?${params.toString()}`, {
-               headers: {
-                   'X-Requested-With': 'XMLHttpRequest'
-               }
-           })
-           .then(response => response.text())
-           .then(html => {
-               document.getElementById('roomsContainer').innerHTML = html;
-           })
-           .catch(error => console.error('Error:', error));
-       }
+        // If no current form values but we have URL filters, use those
+        if (!hasCurrentFilters && hasUrlFilters) {
+            // Populate form data with URL parameters
+            urlParams.forEach((value, key) => {
+                if (key !== 'page') {
+                    formData.append(key, value);
+                }
+            });
+        }
+
+        // Always add the page parameter
+        formData.append('page', page);
+        const params = new URLSearchParams(formData);
+
+        fetch(`/Home/Index?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            document.getElementById('roomsContainer').innerHTML = html;
+
+            // Update URL without page reload
+            const newUrl = `/Home/Index?${params.toString()}`;
+            window.history.pushState({}, '', newUrl);
+        })
+        .catch(error => {
+            console.error('Error loading page:', error);
+            // Optionally show user-friendly error message
+            alert('Error loading page. Please try again.');
+        });
+    }
 </script>
 
 <style>

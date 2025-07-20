@@ -6,12 +6,11 @@ using System.Reflection.Emit;
 
 namespace Conference_Room_Booking_App.Data
 {
-    public class ApplicationDbContext : IdentityDbContext
+    public class ApplicationDbContext : IdentityDbContext<AppUser>
     {
         public DbSet<Room> Rooms { get; set; }
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<ReservationHolder> ReservationHolders { get; set; }
-        public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<UnavailabilityPeriod> UnavailabilityPeriods { get; set; }
 
 

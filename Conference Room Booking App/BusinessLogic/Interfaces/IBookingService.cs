@@ -13,5 +13,6 @@ namespace Conference_Room_Booking_App.BusinessLogic.Interfaces
         Task<bool> CancelBookingAsync(string bookingCode);
         Task<List<Booking>> GetBookingsByRoomIdAsync(int roomId);
         Task<bool> IsRoomAvailableAsync(int roomId, DateTime startTime, DateTime endTime, int? excludeBookingId = null);
+        Task<List<Booking>> GetBookingsForUserAsync(int roomId);
     }
 }
