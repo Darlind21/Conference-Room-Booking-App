@@ -23,6 +23,8 @@ namespace Conference_Room_Booking_App.Data.ViewModels
 
         [Required]
         [Display(Name = "Phone Number")]
-        public int PhoneNumber { get; set; }
+        public string PhoneNumber { get; set; } = null!;
+
+        //public bool IsAppUser { get; set; } = false;
     }
 }

@@ -20,69 +20,70 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 .FirstOrDefaultAsync(b => b.BookingCode == bookingCode && !b.IsDeleted);
         }
 
-        public async Task<Booking?> CreateBookingAsync(int roomId, BookingInfoViewModel bookingInfo, ReservationHolderViewModel reservationHolder) //REVIEW:
+        public async Task<Booking?> CreateBookingAsync
+            (int roomId, BookingInfoViewModel bookingInfo,
+            ReservationHolderViewModel reservationHolder,
+            string? appUserId = null)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Validate room exists and is active
                 var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Id == roomId && r.IsActive);
-                if (room == null)
-                {
-                    return null;
-                }
 
-                // Validate room capacity
-                if (bookingInfo.AttendeesCount > room.MaxCapacity)
-                {
-                    return null;
-                }
+                if (room == null) return null;
+                
+                if (bookingInfo.AttendeesCount > room.MaxCapacity || bookingInfo.AttendeesCount < 5) return null;
 
-                // Validate time slots
-                if (bookingInfo.StartTime >= bookingInfo.EndTime || bookingInfo.StartTime <= DateTime.Now)
-                {
-                    return null;
-                }
+                if (bookingInfo.StartTime >= bookingInfo.EndTime || bookingInfo.StartTime <= DateTime.Now) return null;
 
-                // Check room availability
+                if (bookingInfo.EndTime > DateTime.Now.AddDays(60)) return null;
+
+                var duration = (bookingInfo.EndTime - bookingInfo.StartTime).TotalMinutes;
+                if (duration < 30 || duration > 240) return null;
+
+                if (!IsQuarterHourInterval(bookingInfo.StartTime, bookingInfo.EndTime)) return null;
+
                 var isAvailable = await IsRoomAvailableAsync(roomId, bookingInfo.StartTime, bookingInfo.EndTime);
-                if (!isAvailable)
-                {
-                    return null;
-                }
+                if (!isAvailable) return null;
 
-                // Create or get existing reservation holder
-                var existingHolder = await _context.ReservationHolders
-                    .FirstOrDefaultAsync(rh => rh.IdCardNumber == reservationHolder.IdCardNumber);
 
-                ReservationHolder holder;
-                if (existingHolder != null)
+
+                ReservationHolder newReservationHolder;
+
+                if (!string.IsNullOrEmpty(appUserId)) //if user is authenticated
                 {
-                    // Update existing holder's information
-                    existingHolder.FirstName = reservationHolder.FirstName;
-                    existingHolder.LastName = reservationHolder.LastName;
-                    existingHolder.Email = reservationHolder.Email;
-                    existingHolder.PhoneNumber = reservationHolder.PhoneNumber;
-                    holder = existingHolder;
-                }
-                else
-                {
-                    // Create new reservation holder
-                    holder = new ReservationHolder
+                    var appUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == appUserId);
+                    if (appUser == null) throw new ArgumentException("User was not found when submitting booking form");
+
+                    if(reservationHolder.IdCardNumber == appUser.IdCardNumber) //if user uses his idcardnumber
                     {
-                        FirstName = reservationHolder.FirstName,
-                        LastName = reservationHolder.LastName,
-                        Email = reservationHolder.Email,
-                        IdCardNumber = reservationHolder.IdCardNumber,
-                        PhoneNumber = reservationHolder.PhoneNumber
-                    };
-                    _context.ReservationHolders.Add(holder);
+                        // we get the reservationHolder entity associated with the user so we avoid duplicate rows for same logged in user
+                        var userReservationHolder = await _context.ReservationHolders 
+                            .Where(rh => rh.IdCardNumber == appUser.IdCardNumber)
+                            .FirstOrDefaultAsync();
+
+                        if (userReservationHolder != null) 
+                        {
+                            newReservationHolder = userReservationHolder;
+                        }
+                        else //if auth user has never done a booking before 
+                        {
+                            newReservationHolder = await CreateReservationHolderAsync(reservationHolder);
+                        }
+                    }
+                    else //if user doesnt use his idcardnumber we create new reservation holder row
+                    {
+                        newReservationHolder = await CreateReservationHolderAsync(reservationHolder);
+                    }
+
+
+                }
+                else //else if user is not authenticated we create new reservation holder row
+                {
+                    newReservationHolder = await CreateReservationHolderAsync(reservationHolder);
                 }
 
-                // Generate unique booking code
                 var bookingCode = await GenerateUniqueBookingCodeAsync();
 
-                // Create booking
                 var booking = new Booking
                 {
                     BookingCode = bookingCode,
@@ -92,32 +93,26 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                     Notes = bookingInfo.Notes,
                     RoomId = roomId,
                     Room = room,
-                    ReservationHolder = holder,
-                    Status = BookingStatus.Pending
+                    ReservationHolder = newReservationHolder,
+                    Status = BookingStatus.Pending,
+                    AppUserId = appUserId
                 };
 
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
 
-                // Update the holder's BookingId
-                holder.BookingId = booking.Id;
-                await _context.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-
-                // Return booking with all related data
                 return await GetBookingByCodeAsync(bookingCode);
             }
             catch
             {
-                await transaction.RollbackAsync();
                 return null;
             }
         }
 
-        public async Task<Booking?> UpdateBookingAsync(int bookingId, BookingInfoViewModel bookingInfo, ReservationHolderViewModel reservationHolder) //REVIEW:
+        public async Task<Booking?> UpdateBookingAsync
+            (int bookingId, BookingInfoViewModel bookingInfo,
+            ReservationHolderViewModel reservationHolder, string? appUserId = null) //REVIEW:
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 var booking = await _context.Bookings
@@ -125,68 +120,78 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                     .Include(b => b.ReservationHolder)
                     .FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
 
-                if (booking == null || booking.Status == BookingStatus.Cancelled || booking.Status == BookingStatus.Rejected)
-                    //if booking is cancelled or rejected it cannot be updated
-                {
-                    return null;
-                }
+                //if booking is cancelled or rejected it cannot be updated
+                if (booking == null || booking.Status == BookingStatus.Cancelled || booking.Status == BookingStatus.Rejected) return null;
 
-                // Validate room capacity
-                if (bookingInfo.AttendeesCount > booking.Room.MaxCapacity)
-                {
-                    return null;
-                }
+                if (booking.Room == null || booking.ReservationHolder == null) return null;
 
-                // Validate time slots
-                if (bookingInfo.StartTime >= bookingInfo.EndTime || bookingInfo.StartTime <= DateTime.Now)
-                {
-                    return null;
-                }
+                if (bookingInfo.AttendeesCount > booking.Room.MaxCapacity || bookingInfo.AttendeesCount < 5) return null;
+
+                if (bookingInfo.StartTime >= bookingInfo.EndTime || bookingInfo.StartTime <= DateTime.Now) return null;
+
+                if (bookingInfo.EndTime > DateTime.Now.AddDays(60)) return null;
+
+                var duration = (bookingInfo.EndTime - bookingInfo.StartTime).TotalMinutes;
+                if (duration < 30 || duration > 240) return null;
+
+                if (!IsQuarterHourInterval(bookingInfo.StartTime, bookingInfo.EndTime)) return null;
 
                 // Check room availability (excluding current booking)
                 var isAvailable = await IsRoomAvailableAsync(booking.RoomId, bookingInfo.StartTime, bookingInfo.EndTime, bookingId);
-                if (!isAvailable)
+                if (!isAvailable) return null;
+
+
+
+                if (!string.IsNullOrEmpty(appUserId)) //if user is authenticated
                 {
-                    return null;
+                    var appUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == appUserId) ?? throw new ArgumentException("User was not found when updating booking form");
+
+                    if (reservationHolder.IdCardNumber == appUser.IdCardNumber) //if user uses his idcardnumber
+                    {
+                        // we get the reservationHolder entity associated with the user so we avoid duplicate rows for same logged in user
+                        var userReservationHolder = await _context.ReservationHolders
+                            .Where(rh => rh.IdCardNumber == appUser.IdCardNumber)
+                            .FirstOrDefaultAsync();
+
+                        if (userReservationHolder != null) //if auth user has done a booking before
+                        {
+                            booking.ReservationHolder = userReservationHolder;
+                            booking.AppUserId = appUserId;
+                        }
+                        else //if auth user has never done a booking before
+                        { 
+                            booking.ReservationHolder = BuildReservationHolder(reservationHolder);
+                            booking.AppUserId = appUserId;
+                        }
+                    }
+                    else //if user doesnt use his idcardnumber we create new reservation holder row and disassociate the booking from his appuserId
+                    {
+                        booking.ReservationHolder = BuildReservationHolder(reservationHolder);
+                        booking.AppUserId = null;
+                    }
+
+
+                }
+                else //else if user is not authenticated we still create new reservation holder row
+                {
+                    booking.ReservationHolder = BuildReservationHolder(reservationHolder);
                 }
 
-                // Update booking information
+                // Update the booking fields
                 booking.AttendeesCount = bookingInfo.AttendeesCount;
                 booking.StartTime = bookingInfo.StartTime;
                 booking.EndTime = bookingInfo.EndTime;
                 booking.Notes = bookingInfo.Notes;
                 booking.Status = BookingStatus.Pending;
 
-                // Update reservation holder information
-                booking.ReservationHolder.FirstName = reservationHolder.FirstName;
-                booking.ReservationHolder.LastName = reservationHolder.LastName;
-                booking.ReservationHolder.Email = reservationHolder.Email;
-                booking.ReservationHolder.PhoneNumber = reservationHolder.PhoneNumber;
-
-                // Check if ID card number changed
-                if (booking.ReservationHolder.IdCardNumber != reservationHolder.IdCardNumber)
-                {
-                    // Check if new ID card number already exists
-                    var existingHolder = await _context.ReservationHolders
-                        .FirstOrDefaultAsync(rh => rh.IdCardNumber == reservationHolder.IdCardNumber && rh.Id != booking.ReservationHolder.Id);
-
-                    if (existingHolder != null)
-                    {
-                        // ID card number already exists for another holder
-                        return null;
-                    }
-
-                    booking.ReservationHolder.IdCardNumber = reservationHolder.IdCardNumber;
-                }
+                _context.Bookings.Update(booking);
 
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
 
                 return await GetBookingByCodeAsync(booking.BookingCode);
             }
             catch
             {
-                await transaction.RollbackAsync();
                 return null;
             }
         }
@@ -255,7 +260,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             return !unavailabilityPeriods.Any();
         }
 
-        private async Task<string> GenerateUniqueBookingCodeAsync() //TODO: FIX METHOD
+        private async Task<string> GenerateUniqueBookingCodeAsync()
         {
             string bookingCode;
             bool exists;
@@ -270,12 +275,91 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             return bookingCode;
         }
 
-        private string GenerateRandomCode(int length) //TODO: fIX METHOD
+        private string GenerateRandomCode(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             var random = new Random();
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        private ReservationHolder BuildReservationHolder(ReservationHolderViewModel reservationHolder)
+        {
+            var holder = new ReservationHolder
+            {
+                FirstName = reservationHolder.FirstName,
+                LastName = reservationHolder.LastName,
+                Email = reservationHolder.Email,
+                IdCardNumber = reservationHolder.IdCardNumber,
+                PhoneNumber = reservationHolder.PhoneNumber
+            };
+
+            return holder;
+        }
+
+        private async Task<ReservationHolder> CreateReservationHolderAsync(ReservationHolderViewModel reservationHolder)
+        {
+            var holder = BuildReservationHolder(reservationHolder);
+
+            await _context.ReservationHolders.AddAsync(holder);
+            await _context.SaveChangesAsync();
+
+            return holder;
+        }
+
+        private bool IsQuarterHourInterval(DateTime startTime, DateTime endTime)
+        {
+            // Check if the start and end times are in quarter-hour intervals
+            return (startTime.Minute % 15 == 0 && endTime.Minute % 15 == 0);
+        }
+        public async Task<bool> IsIdCardNumberValid(ReservationHolderViewModel reservationHolder, string? userId)
+        {
+            if (!string.IsNullOrEmpty(userId)) //if user is authenticated 
+            {
+                var appUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId) ?? throw new ArgumentException("Invalid userId provided.");
+
+                // if user has not provided the same IdCardNumber as in his account
+                if (appUser.IdCardNumber != reservationHolder.IdCardNumber)
+                {
+                    //we check if the IdCardNumber belongs to another user
+                    var belongsToAnotherUser = await _context.Users
+                        .AnyAsync(u => u.IdCardNumber == reservationHolder.IdCardNumber && u.Id != userId);
+
+                    if (belongsToAnotherUser) return false;
+
+                    return true; // If it does not belong to another user, we assume it's valid for a new reservation holder
+                }
+                // if user has provided the same IdCardNumber as in his account
+                else
+                {
+                    // We can assume the IdCardNumber is valid since it matches the authenticated user's IdCardNumber
+                    return true;
+                }
+            }
+            else //if user is not authenticated
+            {
+                //we check if the IdCardNumber number belongs to a registered app user
+                var belongsToAnotherUser = await _context.Users
+                    .AnyAsync(u => u.IdCardNumber == reservationHolder.IdCardNumber);
+
+                if (belongsToAnotherUser) return false; // If it belongs to another user, we return false
+                    
+                // If it does not belong to any user, we assume it's valid for a new reservation holder
+                return true;
+                
+            }
+        }
+
+        public string GetStatusColor(BookingStatus status)
+        {
+            return status switch
+            {
+                BookingStatus.Pending => "warning",
+                BookingStatus.Confirmed => "success",
+                BookingStatus.Rejected => "danger",
+                BookingStatus.Cancelled => "secondary",
+                _ => "secondary"
+            };
         }
 
         public Task<List<Booking>> GetBookingsForUserAsync(int roomId) //TODO: Implement

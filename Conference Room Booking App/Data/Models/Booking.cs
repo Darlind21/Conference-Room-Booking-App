@@ -20,9 +20,14 @@ namespace Conference_Room_Booking_App.Data.Models
         public int RoomId { get; set; }
         public required Room Room { get; set; }
 
-        //BUG: Since a booking needs a reservation holder to be created and vice versa its sort of a bug to make the reservationholder nullable but also cannot make non-nullable 
+
         [ForeignKey(nameof(ReservationHolder))]
-        public int? ReservationHolderId { get; set; }
-        public required ReservationHolder? ReservationHolder { get; set; } = null!;
+        public int ReservationHolderId { get; set; }
+        public required ReservationHolder ReservationHolder { get; set; }
+
+
+        [ForeignKey(nameof(AppUser))]
+        public string? AppUserId { get; set; }
+        public AppUser? AppUser { get; set; }
     }
 }

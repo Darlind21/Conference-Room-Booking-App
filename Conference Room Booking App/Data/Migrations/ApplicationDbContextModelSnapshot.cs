@@ -45,6 +45,10 @@ namespace Conference_Room_Booking_App.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("IdCardNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -87,6 +91,9 @@ namespace Conference_Room_Booking_App.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IdCardNumber")
+                        .IsUnique();
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -106,6 +113,9 @@ namespace Conference_Room_Booking_App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AppUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("AttendeesCount")
                         .HasColumnType("int");
 
@@ -122,7 +132,7 @@ namespace Conference_Room_Booking_App.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("ReservationHolderId")
+                    b.Property<int>("ReservationHolderId")
                         .HasColumnType("int");
 
                     b.Property<int>("RoomId")
@@ -136,9 +146,9 @@ namespace Conference_Room_Booking_App.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ReservationHolderId")
-                        .IsUnique()
-                        .HasFilter("[ReservationHolderId] IS NOT NULL");
+                    b.HasIndex("AppUserId");
+
+                    b.HasIndex("ReservationHolderId");
 
                     b.HasIndex("RoomId");
 
@@ -153,9 +163,6 @@ namespace Conference_Room_Booking_App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("BookingId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -166,19 +173,17 @@ namespace Conference_Room_Booking_App.Migrations
 
                     b.Property<string>("IdCardNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PhoneNumber")
-                        .HasColumnType("int");
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("IdCardNumber")
-                        .IsUnique();
 
                     b.ToTable("ReservationHolders");
                 });
@@ -388,16 +393,24 @@ namespace Conference_Room_Booking_App.Migrations
 
             modelBuilder.Entity("Conference_Room_Booking_App.Data.Models.Booking", b =>
                 {
+                    b.HasOne("Conference_Room_Booking_App.Data.Models.AppUser", "AppUser")
+                        .WithMany("Bookings")
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Conference_Room_Booking_App.Data.Models.ReservationHolder", "ReservationHolder")
-                        .WithOne("Booking")
-                        .HasForeignKey("Conference_Room_Booking_App.Data.Models.Booking", "ReservationHolderId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .WithMany()
+                        .HasForeignKey("ReservationHolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Conference_Room_Booking_App.Data.Models.Room", "Room")
                         .WithMany("Bookings")
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.Navigation("AppUser");
 
                     b.Navigation("ReservationHolder");
 
@@ -466,9 +479,9 @@ namespace Conference_Room_Booking_App.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Conference_Room_Booking_App.Data.Models.ReservationHolder", b =>
+            modelBuilder.Entity("Conference_Room_Booking_App.Data.Models.AppUser", b =>
                 {
-                    b.Navigation("Booking");
+                    b.Navigation("Bookings");
                 });
 
             modelBuilder.Entity("Conference_Room_Booking_App.Data.Models.Room", b =>

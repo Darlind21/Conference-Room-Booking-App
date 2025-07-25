@@ -1,11 +1,13 @@
 ﻿using Conference_Room_Booking_App.BusinessLogic.Interfaces;
 using Conference_Room_Booking_App.BusinessLogic.Services;
+using Conference_Room_Booking_App.Data.Helpers;
 using Conference_Room_Booking_App.Data.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Conference_Room_Booking_App.Controllers
 {
-    public class BookingController (IBookingService _bookingService, IRoomService _roomService) : Controller
+    public class BookingController (IBookingService _bookingService, IRoomService _roomService, IUserService _userService) : Controller
     {
         public async Task<IActionResult> Create(int roomId)
         {
@@ -16,6 +18,29 @@ namespace Conference_Room_Booking_App.Controllers
             }
 
             var availableSlots = await _roomService.GetAvailableTimeSlotsAsync(roomId);
+
+            var reservationHolder = new ReservationHolderViewModel();
+
+            //If we have an authenticated user we prefill the reservation holder fields with his details
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    var user = await _userService.GetAppUserByIdAsync(userId);
+
+                    if (user != null)
+                    {
+
+                        reservationHolder.FirstName = user.FirstName;
+                        reservationHolder.LastName = user.LastName;
+                        reservationHolder.Email = user.Email?? string.Empty;
+                        reservationHolder.PhoneNumber = user.PhoneNumber ?? string.Empty;
+                        reservationHolder.IdCardNumber = user.IdCardNumber;
+                    }
+                }
+            }
 
             var viewModel = new CreateEditBookingViewModel
             {
@@ -34,7 +59,7 @@ namespace Conference_Room_Booking_App.Controllers
                     StartTime = DateTime.Now.AddHours(1),
                     EndTime = DateTime.Now.AddHours(2)
                 },
-                ReservationHolder = new ReservationHolderViewModel()
+                ReservationHolder = reservationHolder
             };
 
             return View("CreateEdit", viewModel);
@@ -87,6 +112,9 @@ namespace Conference_Room_Booking_App.Controllers
         [HttpPost]
         public async Task<IActionResult> Submit(CreateEditBookingViewModel model)
         {
+            var appUserId = (User?.Identity?.IsAuthenticated == true) ?
+                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
+
             if (!ModelState.IsValid)
             {
                 // Reload room details for display
@@ -103,7 +131,8 @@ namespace Conference_Room_Booking_App.Controllers
                 var updatedBooking = await _bookingService.UpdateBookingAsync(
                     model.BookingId.Value,
                     model.BookingInfo,
-                    model.ReservationHolder
+                    model.ReservationHolder,
+                    appUserId
                 );
 
                 if (updatedBooking != null)
@@ -116,7 +145,8 @@ namespace Conference_Room_Booking_App.Controllers
                 var newBooking = await _bookingService.CreateBookingAsync(
                     model.RoomDetail.Id,
                     model.BookingInfo,
-                    model.ReservationHolder
+                    model.ReservationHolder,
+                    appUserId
                 );
 
                 if (newBooking != null)
@@ -188,24 +218,37 @@ namespace Conference_Room_Booking_App.Controllers
                     request.ExcludeBookingId
                 );
 
-                return Ok(new { isAvailable = isAvailable });
+                return Ok(new { isAvailable });
             }
             catch
             {
-                // Log the exception (assuming you have logging configured)
-                // _logger.LogError(ex, "Error checking room availability");
 
                 return StatusCode(500, new { isAvailable = false, message = "An error occurred while checking availability" });
             }
         }
 
-        // Request model for the CheckAvailability endpoint
-        public class CheckAvailabilityRequest
+
+        [HttpPost]
+        public async Task<IActionResult> ValidateIdCardNumber([FromBody] ReservationHolderViewModel reservationHolder)
         {
-            public int RoomId { get; set; }
-            public DateTime StartTime { get; set; }
-            public DateTime EndTime { get; set; }
-            public int? ExcludeBookingId { get; set; }
+            try
+            {
+                if (reservationHolder == null)
+                {
+                    return BadRequest(new { isValid = false, message = "Invalid reservation holder data" });
+                }
+
+                var appUserId = (User?.Identity?.IsAuthenticated == true) ?
+                    User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
+
+                var isValid = await _bookingService.IsIdCardNumberValid(reservationHolder, appUserId);
+
+                return Ok(new { isValid });
+            }
+            catch
+            {
+                return BadRequest(new { isValid = false, message = "An error occurred while validating the ID card number" });
+            }
         }
     }
 }

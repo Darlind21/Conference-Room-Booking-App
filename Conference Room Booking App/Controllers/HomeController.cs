@@ -12,7 +12,6 @@ namespace Conference_Room_Booking_App.Controllers
     {
         public async Task<IActionResult> Index(HomeViewModel model, int page = 1) //REVIEW:
             //Even though the view Index.cshtml doesnt explicitly say "Send a HomeViewModel to the controller", ASP.NET does that automatically via model-binding
-            //
         {
             var rooms = await _roomService.GetFilteredRoomsAsync(
                 model.StartTime,
@@ -74,16 +73,38 @@ namespace Conference_Room_Booking_App.Controllers
             {
                 BookingCode = booking.BookingCode,
                 Status = booking.Status.ToString(),
-                StatusColor = GetStatusColor(booking.Status),
+                StatusColor = _bookingService.GetStatusColor(booking.Status),
                 RoomName = booking.Room.Name,
                 RoomCode = booking.Room.RoomCode,
                 AttendeesCount = booking.AttendeesCount,
                 StartTime = booking.StartTime,
                 EndTime = booking.EndTime,
                 Notes = booking.Notes,
-                CanEdit = booking.Status == BookingStatus.Pending,
+                CanEdit = booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Confirmed,
                 CanCancel = booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Confirmed
             };
+
+            if (!string.IsNullOrEmpty(booking.AppUserId)) //if booking is done by an appuser
+            {
+                var appUserId = (User?.Identity?.IsAuthenticated == true) ?
+                    User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
+                if (string.IsNullOrEmpty(appUserId)) //if the current user is not auth he cannot edit/cancel it
+                {
+                    viewModel.CanEdit = false;
+                    viewModel.CanCancel = false;
+                }
+                else //else if we have an authenticated user
+                {
+                    if (booking.AppUserId != appUserId) //and he doesn't match the bookings appuserid he cannot edit/cancel it
+                    {
+                        viewModel.CanEdit = false;
+                        viewModel.CanCancel = false;
+                    } 
+                }
+
+            }
+
+            if (booking.EndTime < DateTime.Now || booking.StartTime < DateTime.Now.AddMinutes(-30)) viewModel.CanCancel = false; //can only cancel 30 mins in advance
 
             //REVIEW: "GET" should be "POST" ?????
             // If this is a POST request (redirect from booking creation), redirect to GET to avoid form resubmission
@@ -93,18 +114,6 @@ namespace Conference_Room_Booking_App.Controllers
             }
 
             return View("BookingStatus", viewModel);
-        }
-
-        private string GetStatusColor(BookingStatus status) //REVIEW:
-        {
-            return status switch
-            {
-                BookingStatus.Pending => "warning",
-                BookingStatus.Confirmed => "success",
-                BookingStatus.Rejected => "danger",
-                BookingStatus.Cancelled => "secondary",
-                _ => "secondary"
-            };
         }
     }
 }

@@ -452,10 +452,10 @@
                 const firstNameValue = firstNameInput.value.trim();
                 const firstNameError = document.getElementById('firstNameError');
 
-                if (!firstNameValue) {
-                    firstNameError.textContent = 'First name is required';
-                    return false;
-                }
+                // if (!firstNameValue) {
+                //     firstNameError.textContent = 'First name is required';
+                //     return false;
+                // }
 
                 if (firstNameValue.length < 2) {
                     firstNameError.textContent = 'First name must be at least 2 characters long';
@@ -491,10 +491,10 @@
                 const lastNameValue = lastNameInput.value.trim();
                 const lastNameError = document.getElementById('lastNameError');
 
-                if (!lastNameValue) {
-                    lastNameError.textContent = 'Last name is required';
-                    return false;
-                }
+                // if (!lastNameValue) {
+                //     lastNameError.textContent = 'Last name is required';
+                //     return false;
+                // }
 
                 if (lastNameValue.length < 2) {
                     lastNameError.textContent = 'Last name must be at least 2 characters long';
@@ -530,10 +530,10 @@
                 const emailValue = emailInput.value.trim();
                 const emailError = document.getElementById('emailError');
 
-                if (!emailValue) {
-                    emailError.textContent = 'Email address is required';
-                    return false;
-                }
+                // if (!emailValue) {
+                //     emailError.textContent = 'Email address is required';
+                //     return false;
+                // }
 
                 const atIndex = emailValue.indexOf('@@');
                 const lastDotIndex = emailValue.lastIndexOf('.');
@@ -577,10 +577,10 @@
                 const phoneValue = phoneNumberInput.value.trim();
                 const phoneError = document.getElementById('phoneNumberError');
 
-                if (!phoneValue) {
-                    phoneError.textContent = 'Phone number is required';
-                    return false;
-                }
+                // if (!phoneValue) {
+                //     phoneError.textContent = 'Phone number is required';
+                //     return false;
+                // }
 
                 // Remove all non-numeric characters for validation
                 const numericOnly = phoneValue.replace(/[^\d]/g, '');
@@ -621,10 +621,10 @@
                 const idValue = idCardNumberInput.value.trim();
                 const idError = document.getElementById('idCardNumberError');
 
-                if (!idValue) {
-                    idError.textContent = 'ID card number is required';
-                    return false;
-                }
+                // if (!idValue) {
+                //     idError.textContent = 'ID card number is required';
+                //     return false;
+                // }
 
                 if (idValue.length < 5) {
                     idError.textContent = 'ID card number must be at least 5 characters long';
@@ -794,10 +794,55 @@
                 }
             }
 
+            // NEW: Validate ID Card Number function
+            async function validateIdCardNumberWithAPI() {
+                // First do local validation
+                if (!validateIdCardNumber()) {
+                    return false;
+                }
+
+                const reservationHolder = {
+                    FirstName: firstNameInput.value.trim(),
+                    LastName: lastNameInput.value.trim(),
+                    Email: emailInput.value.trim(),
+                    PhoneNumber: phoneNumberInput.value.trim(),
+                    IdCardNumber: idCardNumberInput.value.trim()
+                };
+
+                try {
+                    const response = await fetch('@Url.Action("ValidateIdCardNumber", "Booking")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify(reservationHolder)
+                    });
+
+                    const result = await response.json();
+
+                    const idError = document.getElementById('idCardNumberError');
+
+                    if (result.isValid) {
+                        idError.textContent = '';
+                        return true;
+                    } else {
+                        const message = result.message || 'This ID Card Number belongs to another account. Please login to that account to finish booking or if you think this is a mistake please contact support!';
+                        idError.textContent = message;
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Error validating ID card number:', error);
+                    const idError = document.getElementById('idCardNumberError');
+                    idError.textContent = 'Error validating ID card number. Please try again.';
+                    return false;
+                }
+            }
+
             // Check availability button click
             checkAvailabilityBtn.addEventListener('click', checkAvailability);
 
-            // Form submission with availability check
+            // Form submission with availability check AND ID card validation
             bookingForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
@@ -806,28 +851,46 @@
                     const errorMessage = document.createElement('div');
                     errorMessage.className = 'alert alert-danger mt-3';
                     errorMessage.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Please fix all validation errors before submitting the form.';
-                    
+
                     // Remove any existing error messages
                     const existingError = document.querySelector('.alert-danger');
                     if (existingError) {
                         existingError.remove();
                     }
-                    
+
                     // Add error message after the form
                     bookingForm.appendChild(errorMessage);
-                    
+
                     // Scroll to first error
                     const firstError = document.querySelector('.error-message:not(:empty)');
                     if (firstError) {
                         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
-                    
+
                     return;
                 }
 
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking availability...';
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validating...';
 
+                // First validate ID card number
+                const isIdCardValid = await validateIdCardNumberWithAPI();
+
+                if (!isIdCardValid) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>@(Model.IsEdit ? "Update Booking" : "Submit Booking")';
+
+                    // Scroll to ID card error
+                    const idError = document.getElementById('idCardNumberError');
+                    if (idError && idError.textContent) {
+                        idError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+
+                    return;
+                }
+
+                // Then check availability
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking availability...';
                 const isAvailable = await checkAvailability();
 
                 if (isAvailable) {
@@ -872,14 +935,14 @@
             // Initialize with existing values if editing
             @if (Model.IsEdit && Model.BookingInfo?.StartTime != null)
             {
-                        <text>
-                        const existingStartTime = new Date('@Model.BookingInfo.StartTime.ToString("yyyy-MM-ddTHH:mm:ss")');
-                        const existingEndTime = new Date('@Model.BookingInfo.EndTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+                            <text>
+                            const existingStartTime = new Date('@Model.BookingInfo.StartTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+                            const existingEndTime = new Date('@Model.BookingInfo.EndTime.ToString("yyyy-MM-ddTHH:mm:ss")');
 
-                        bookingDateInput.value = existingStartTime.toISOString().split('T')[0];
-                        startTimeInput.value = existingStartTime.toTimeString().slice(0, 5);
-                        endTimeInput.value = existingEndTime.toTimeString().slice(0, 5);
-                        </text>
+                            bookingDateInput.value = existingStartTime.toISOString().split('T')[0];
+                            startTimeInput.value = existingStartTime.toTimeString().slice(0, 5);
+                            endTimeInput.value = existingEndTime.toTimeString().slice(0, 5);
+                            </text>
             }
         });
     </script>

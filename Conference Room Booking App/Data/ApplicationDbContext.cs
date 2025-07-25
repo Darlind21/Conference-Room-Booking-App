@@ -52,11 +52,14 @@ namespace Conference_Room_Booking_App.Data
                 .HasOne(b => b.Room)
                 .WithMany(r => r.Bookings);
 
-            //BUG:
+
             builder.Entity<Booking>()
-                .HasOne(b => b.ReservationHolder)
-                .WithOne(rh => rh.Booking)
-                .OnDelete(DeleteBehavior.NoAction);
+                .HasOne(b => b.ReservationHolder);
+
+            builder.Entity<Booking>()
+                .HasOne(b => b.AppUser)
+                .WithMany(au => au.Bookings)
+                .OnDelete(DeleteBehavior.SetNull);
 
 
 
@@ -66,12 +69,9 @@ namespace Conference_Room_Booking_App.Data
                 .WithMany(r => r.UnavailabilityPeriods)
                 .OnDelete(DeleteBehavior.NoAction);
 
-
-            //BUG:
-            builder.Entity<ReservationHolder>()
-                .HasOne(rh => rh.Booking)
-                .WithOne(b => b.ReservationHolder)
-                .OnDelete(DeleteBehavior.NoAction);
+            builder.Entity<AppUser>()
+                .HasIndex(au => au.IdCardNumber)
+                .IsUnique();
         }
     }
 }
