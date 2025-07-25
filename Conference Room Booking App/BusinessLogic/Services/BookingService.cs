@@ -1,5 +1,6 @@
 ﻿using Conference_Room_Booking_App.BusinessLogic.Interfaces;
 using Conference_Room_Booking_App.Data;
+using Conference_Room_Booking_App.Data.DTOs;
 using Conference_Room_Booking_App.Data.Enums;
 using Conference_Room_Booking_App.Data.Models;
 
@@ -312,6 +313,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
             // Check if the start and end times are in quarter-hour intervals
             return (startTime.Minute % 15 == 0 && endTime.Minute % 15 == 0);
         }
+
         public async Task<bool> IsIdCardNumberValid(ReservationHolderViewModel reservationHolder, string? userId)
         {
             if (!string.IsNullOrEmpty(userId)) //if user is authenticated 
@@ -365,6 +367,80 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
         public Task<List<Booking>> GetBookingsForUserAsync(int roomId) //TODO: Implement
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<PaginatedResult<BookingStatusViewModel>> GetFilteredBookingsAsync
+            (string appUserId, DateTime? minDate, DateTime? maxDate,
+            int? minAttendees, int? maxAttendees, BookingStatus? status,
+            int page, int itemsPerPage)
+        {
+            if (string.IsNullOrEmpty(appUserId)) throw new ArgumentException("AppUserId not provided when filtering bookings");
+
+            var query = _context.Bookings
+                .Include(b => b.Room)
+                .Where(b => b.AppUserId == appUserId && b.IsDeleted == false);
+                
+
+            if (minDate.HasValue) query = query.Where(b => b.StartTime.Date >= minDate.Value.Date);
+
+            if (maxDate.HasValue) query = query.Where(b => b.EndTime.Date <= maxDate.Value.Date);
+
+            if (minAttendees != null) query = query.Where(b => b.AttendeesCount >= minAttendees);
+
+            if (maxAttendees != null) query = query.Where(b => b.AttendeesCount <= maxAttendees);
+
+            if (status != null) query = query.Where(b => b.Status == status);
+
+            var bookings = await query
+                .OrderByDescending(b => b.EndTime)
+                .ToListAsync();
+
+            //pagination params
+            var totalItems = bookings.Count;
+            var totalPages = (int)Math.Ceiling((double)totalItems / itemsPerPage);
+            var paginatedBookings = bookings
+                .Skip((page - 1) * itemsPerPage)
+                .Take(itemsPerPage)
+                .ToList();
+
+            var bookingStatusList= new List<BookingStatusViewModel>();
+
+            foreach( var booking in paginatedBookings)
+            {
+                var newBookingStatus = new BookingStatusViewModel
+                {
+                        BookingCode = booking.BookingCode,
+                        Status = booking.Status.ToString(),
+                        StatusColor = GetStatusColor(booking.Status),
+                        RoomName = booking.Room.Name,
+                        RoomCode = booking.Room.RoomCode,
+                        AttendeesCount = booking.AttendeesCount,
+                        StartTime = booking.StartTime,
+                        EndTime = booking.EndTime,
+                        Notes = booking.Notes,
+                        CanEdit = booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Confirmed,
+                        CanCancel = booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Confirmed
+
+
+                };
+
+                if (booking.EndTime < DateTime.Now || booking.StartTime < DateTime.Now.AddMinutes(30))
+                {
+                    newBookingStatus.CanCancel = false; //can only cancel or edit no less then 30 mins before 
+                    newBookingStatus.CanEdit = false;
+                }
+
+                bookingStatusList.Add(newBookingStatus);
+            }
+
+            return new PaginatedResult<BookingStatusViewModel>
+            {
+                Items = bookingStatusList,
+                TotalItems = totalItems,
+                TotalPages = totalPages,
+                CurrentPage = page,
+                ItemsPerPage = itemsPerPage
+            };
         }
     }
 }

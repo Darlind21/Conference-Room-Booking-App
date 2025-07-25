@@ -3,6 +3,8 @@ using Conference_Room_Booking_App.Data;
 using Conference_Room_Booking_App.Data.DTOs;
 using Conference_Room_Booking_App.Data.Enums;
 using Conference_Room_Booking_App.Data.Models;
+using Conference_Room_Booking_App.Data.ViewModels;
+
 //using Conference_Room_Booking_App.Data.ViewModels.Booking;
 //using Conference_Room_Booking_App.Data.ViewModels.Room;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +21,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
         }
 
-        public async Task<PaginatedResult<RoomWithAvailability>> GetFilteredRoomsAsync(
+        public async Task<PaginatedResult<RoomCardViewModel>> GetFilteredRoomsAsync(
             DateTime? startTime,
             DateTime? endTime,
             DateTime? date,
@@ -72,11 +74,11 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 .Take(itemsPerPage)
                 .ToList();
 
-            var roomsWithAvailability = new List<RoomWithAvailability>();
+            var roomsWithAvailability = new List<RoomCardViewModel>();
             foreach (var room in paginatedRooms) //Mapping Room to RoomWithAvailability and get avb time slots
             {
                 var availableSlots = await GetAvailableTimeSlotsAsync(room.Id);
-                roomsWithAvailability.Add(new RoomWithAvailability
+                roomsWithAvailability.Add(new RoomCardViewModel
                 {
                     Id = room.Id,
                     Name = room.Name,
@@ -87,7 +89,7 @@ namespace Conference_Room_Booking_App.BusinessLogic.Services
                 });
             }
 
-            return new PaginatedResult<RoomWithAvailability>
+            return new PaginatedResult<RoomCardViewModel>
             {
                 Items = roomsWithAvailability,
                 TotalItems = totalItems,

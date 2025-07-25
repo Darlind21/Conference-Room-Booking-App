@@ -1,0 +1,339 @@
+﻿@model Conference_Room_Booking_App.Data.ViewModels.MyBookingsViewModel
+@using Conference_Room_Booking_App.Data.Enums
+@{
+    ViewData["Title"] = "My Bookings";
+}
+
+<div class="container mt-4">
+    <!-- Booking Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Filter My Bookings</h5>
+                    <form id="filterForm" method="get">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <label for="StartDate" class="form-label">Start Date</label>
+                                <input id="StartDate" name="StartDate" type="date" class="form-control" 
+                                       min="2020-01-01" max="@DateTime.Now.AddMonths(2).ToString("yyyy-MM-dd")"
+                                       value="@Model.StartDate?.ToString("yyyy-MM-dd")">
+                                <div id="startDateError" class="error-message"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="EndDate" class="form-label">End Date</label>
+                                <input id="EndDate" name="EndDate" type="date" class="form-control" 
+                                       min="2020-01-01" max="@DateTime.Now.AddMonths(2).ToString("yyyy-MM-dd")"
+                                       value="@Model.EndDate?.ToString("yyyy-MM-dd")">
+                                <div id="endDateError" class="error-message"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="MinAttendees" class="form-label">Min Attendees</label>
+                                <input id="MinAttendees" name="MinAttendees" type="number" class="form-control" 
+                                       min="5" max="95" value="@Model.MinAttendees">
+                                <div id="minAttendeesError" class="error-message"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="MaxAttendees" class="form-label">Max Attendees</label>
+                                <input id="MaxAttendees" name="MaxAttendees" type="number" class="form-control" 
+                                       min="5" max="100" value="@Model.MaxAttendees">
+                                <div id="maxAttendeesError" class="error-message"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="Status" class="form-label">Status</label>
+                                <select id="Status" name="Status" class="form-control">
+                                    <option value="">All Statuses</option>
+                                    <option value="1" selected="@(Model.Status != null && (int)Model.Status == 0)">Pending</option>
+                                    <option value="2" selected="@(Model.Status != null && (int)Model.Status == 1)">Confirmed</option>
+                                    <option value="3" selected="@(Model.Status != null && (int)Model.Status == 2)">Rejected</option>
+                                    <option value="4" selected="@(Model.Status != null && (int)Model.Status == 3)">Cancelled</option>
+                                </select>
+                                <div id="statusError" class="error-message"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-flex">
+                                    <button id="searchButton" type="submit" class="btn btn-success me-2" disabled>Filter</button>
+                                    <button id="clearButton" type="button" class="btn btn-secondary" onclick="clearFilters()" disabled>Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bookings Section -->
+    <div class="row">
+        <div class="col-12">
+            <div id="bookingsContainer">
+                @await Html.PartialAsync("_BookingsPartial", Model.Bookings)
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-message {
+        color: red;
+        font-size: 0.875em;
+        margin-top: 0.25rem;
+        display: none;
+    }
+    
+    .info-text {
+        font-size: 0.75em;
+        color: #666;
+        margin-top: 0.25rem;
+    }
+</style>
+
+<script> //FIX: Real time validation does not work 
+    // Date constants
+    const MIN_DATE = '2020-01-01';
+    const MAX_DATE = '@DateTime.Now.AddMonths(2).ToString("yyyy-MM-dd")';
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        checkButtonStates();
+        
+        // Add event listeners to all form inputs
+        const formInputs = document.querySelectorAll('#filterForm input, #filterForm select');
+        formInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                validateField(this);
+                checkButtonStates();
+            });
+            input.addEventListener('change', function() {
+                validateField(this);
+                checkButtonStates();
+            });
+        });
+    });
+
+    function validateField(field) {
+        const fieldId = field.id;
+        const errorElement = document.getElementById(fieldId.toLowerCase() + 'Error');
+        let isValid = true;
+        let errorMessage = '';
+
+        // Clear previous error
+        errorElement.style.display = 'none';
+        errorElement.textContent = '';
+
+        if (field.value === '') {
+            return true; // Empty fields are valid (optional filters)
+        }
+
+        switch (fieldId) {
+            case 'StartDate':
+                const startDate = new Date(field.value);
+                const minDate = new Date(MIN_DATE);
+                const maxDate = new Date(MAX_DATE);
+                
+                if (startDate < minDate) {
+                    errorMessage = 'Start date cannot be earlier than 2020';
+                    isValid = false;
+                } else if (startDate > maxDate) {
+                    errorMessage = 'Start date cannot be later than 2 months from now';
+                    isValid = false;
+                } else {
+                    // Check if start date is after end date
+                    const endDate = document.getElementById('EndDate').value;
+                    if (endDate && new Date(field.value) > new Date(endDate)) {
+                        errorMessage = 'Start date must be before end date';
+                        isValid = false;
+                    }
+                }
+                break;
+
+            case 'EndDate':
+                const endDate = new Date(field.value);
+                const minDateEnd = new Date(MIN_DATE);
+                const maxDateEnd = new Date(MAX_DATE);
+                
+                if (endDate < minDateEnd) {
+                    errorMessage = 'End date cannot be earlier than 2020';
+                    isValid = false;
+                } else if (endDate > maxDateEnd) {
+                    errorMessage = 'End date cannot be later than 2 months from now';
+                    isValid = false;
+                } else {
+                    // Check if end date is before start date
+                    const startDate = document.getElementById('StartDate').value;
+                    if (startDate && new Date(field.value) < new Date(startDate)) {
+                        errorMessage = 'End date must be after start date';
+                        isValid = false;
+                    }
+                }
+                break;
+
+            case 'MinAttendees':
+                const minAttendees = parseInt(field.value);
+                if (minAttendees < 5) {
+                    errorMessage = 'Minimum attendees cannot be less than 5';
+                    isValid = false;
+                } else if (minAttendees > 95) {
+                    errorMessage = 'Minimum attendees cannot be more than 95';
+                    isValid = false;
+                } else {
+                    // Check if min is greater than max
+                    const maxAttendees = parseInt(document.getElementById('MaxAttendees').value);
+                    if (maxAttendees && minAttendees > maxAttendees) {
+                        errorMessage = 'Minimum attendees must be less than maximum attendees';
+                        isValid = false;
+                    }
+                }
+                break;
+
+            case 'MaxAttendees':
+                const maxAttendees = parseInt(field.value);
+                if (maxAttendees < 5) {
+                    showError = 'Maximum attendees cannot be less than 5';
+                    isValid = false;
+                } else if (maxAttendees > 100) {
+                    errorMessage = 'Maximum attendees cannot be more than 100';
+                    isValid = false;
+                } else {
+                    // Check if max is less than min
+                    const minAttendees = parseInt(document.getElementById('MinAttendees').value);
+                    if (minAttendees && maxAttendees < minAttendees) {
+                        errorMessage = 'Maximum attendees must be greater than minimum attendees';
+                        isValid = false;
+                    }
+                }
+                break;
+        }
+
+        if (!isValid) {
+            errorElement.textContent = errorMessage;
+            errorElement.style.display = 'block';
+        }
+
+        return isValid;
+    }
+
+    function validateAllFields() {
+        const formInputs = document.querySelectorAll('#filterForm input[type="date"], #filterForm input[type="number"]');
+        let allValid = true;
+
+        formInputs.forEach(input => {
+            if (input.value && !validateField(input)) {
+                allValid = false;
+            }
+        });
+
+        return allValid;
+    }
+
+    function hasAnyFilterValue() {
+        const startDate = document.getElementById('StartDate').value;
+        const endDate = document.getElementById('EndDate').value;
+        const minAttendees = document.getElementById('MinAttendees').value;
+        const maxAttendees = document.getElementById('MaxAttendees').value;
+        const status = document.getElementById('Status').value;
+
+        return startDate || endDate || minAttendees || maxAttendees || status;
+    }
+
+    function checkButtonStates() {
+        const hasFilters = hasAnyFilterValue();
+        let isValid = true;
+        
+        // Only validate fields that have values
+        const formInputs = document.querySelectorAll('#filterForm input[type="date"], #filterForm input[type="number"]');
+        formInputs.forEach(input => {
+            if (input.value && !validateField(input)) {
+                isValid = false;
+            }
+        });
+        
+        const searchButton = document.getElementById('searchButton');
+        const clearButton = document.getElementById('clearButton');
+        
+        // Enable/disable filter button - needs at least one filter AND all filled fields must be valid
+        searchButton.disabled = !hasFilters || !isValid;
+        
+        // Enable/disable clear button
+        clearButton.disabled = !hasFilters;
+    }
+
+    function clearFilters() {
+        if (!hasAnyFilterValue()) {
+            return; // Don't clear if no filters are set
+        }
+
+        document.getElementById('StartDate').value = '';
+        document.getElementById('EndDate').value = '';
+        document.getElementById('MinAttendees').value = '';
+        document.getElementById('MaxAttendees').value = '';
+        document.getElementById('Status').value = '';
+        
+        // Clear any error messages
+        document.querySelectorAll('.error-message').forEach(function(element) {
+            element.style.display = 'none';
+        });
+        
+        // Update button states
+        checkButtonStates();
+        
+        // Submit the form to reload with cleared filters
+        document.getElementById('filterForm').submit();
+    }
+
+    function loadPage(page) {
+        // Get current form data
+        var form = document.getElementById('filterForm');
+        var formData = new FormData(form);
+        
+        // Add page parameter
+        formData.append('page', page);
+        
+        // Convert FormData to URLSearchParams
+        var params = new URLSearchParams();
+        for (var pair of formData.entries()) {
+            if (pair[1]) { // Only add non-empty values
+                params.append(pair[0], pair[1]);
+            }
+        }
+        
+        // Make AJAX request
+        fetch('@Url.Action("MyBookings", "Booking")?' + params.toString(), {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('bookingsContainer').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // Form validation on submit
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        if (!hasAnyFilterValue()) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Only validate fields that have values
+        const formInputs = document.querySelectorAll('#filterForm input[type="date"], #filterForm input[type="number"]');
+        let allValid = true;
+        
+        formInputs.forEach(input => {
+            if (input.value && !validateField(input)) {
+                allValid = false;
+            }
+        });
+        
+        if (!allValid) {
+            e.preventDefault();
+            return false;
+        }
+    });
+</script>

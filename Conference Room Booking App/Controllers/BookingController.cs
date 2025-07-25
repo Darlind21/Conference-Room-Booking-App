@@ -1,7 +1,10 @@
 ﻿using Conference_Room_Booking_App.BusinessLogic.Interfaces;
 using Conference_Room_Booking_App.BusinessLogic.Services;
+using Conference_Room_Booking_App.Data.Enums;
 using Conference_Room_Booking_App.Data.Helpers;
+using Conference_Room_Booking_App.Data.Models;
 using Conference_Room_Booking_App.Data.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -227,6 +230,55 @@ namespace Conference_Room_Booking_App.Controllers
             }
         }
 
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> MyBookings(MyBookingsViewModel model, int page = 1)
+        {
+            var appUserId = (User?.Identity?.IsAuthenticated == true) ?
+                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value :
+                throw new ArgumentException("Unable to get app user Id");
+
+            var bookings = await _bookingService.GetFilteredBookingsAsync(
+                appUserId!,
+                model.StartDate,
+                model.EndDate,
+                model.MinAttendees,
+                model.MaxAttendees,
+                model.Status,
+                page,
+                6
+            );
+
+            model.Bookings = new PaginatedBookingsViewModel
+            {
+                Bookings = bookings.Items.Select(b => new BookingStatusViewModel
+                {
+                    BookingCode = b.BookingCode,
+                    Status = b.Status.ToString(),
+                    StatusColor = b.StatusColor,
+                    RoomName = b.RoomName,
+                    RoomCode = b.RoomCode,
+                    AttendeesCount = b.AttendeesCount,
+                    StartTime = b.StartTime,
+                    EndTime = b.EndTime,
+                    Notes = b.Notes,
+                    CanEdit = b.CanEdit,
+                    CanCancel = b.CanCancel
+                }).ToList(),
+
+                CurrentPage = page,
+                TotalPages = bookings.TotalPages,
+                TotalItems = bookings.TotalItems,
+                ItemsPerPage = bookings.ItemsPerPage
+            };
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("_BookingsPartial", model.Bookings);
+            }
+
+            return View(model);
+        }
 
         [HttpPost]
         public async Task<IActionResult> ValidateIdCardNumber([FromBody] ReservationHolderViewModel reservationHolder)

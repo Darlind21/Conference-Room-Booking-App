@@ -59,6 +59,8 @@ namespace Conference_Room_Booking_App.Controllers
                 });
             }
 
+            bookingCode = bookingCode.Trim().ToUpper();
+
             var booking = await _bookingService.GetBookingByCodeAsync(bookingCode);
 
             if (booking == null)
@@ -104,7 +106,11 @@ namespace Conference_Room_Booking_App.Controllers
 
             }
 
-            if (booking.EndTime < DateTime.Now || booking.StartTime < DateTime.Now.AddMinutes(-30)) viewModel.CanCancel = false; //can only cancel 30 mins in advance
+            if (booking.EndTime < DateTime.Now || booking.StartTime < DateTime.Now.AddMinutes(30))
+            {
+                viewModel.CanCancel = false; //can only cancel or edit no less then 30 mins before 
+                viewModel.CanEdit = false;
+            }
 
             //REVIEW: "GET" should be "POST" ?????
             // If this is a POST request (redirect from booking creation), redirect to GET to avoid form resubmission

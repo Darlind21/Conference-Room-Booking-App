@@ -22,11 +22,20 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
+                        
+                        <li class="nav-item ms-lg-1">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">
                                 <i class="fas fa-home me-1"></i>Home
                             </a>
                         </li>
+
+                        <!-- My Bookings Link -->
+                        <li class="nav-item ms-lg-3">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Booking" asp-action="MyBookings">
+                                <i class="fas fa-calendar-alt me-1"></i>My Bookings
+                            </a>
+                        </li>
+
                     </ul>
                     <partial name="_LoginPartial" />
                 </div>
